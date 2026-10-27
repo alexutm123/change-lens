@@ -7,7 +7,7 @@ const fsp = require('node:fs/promises');
 const { ChangeTracker } = require('./tracker');
 const { Decorations } = require('./render');
 
-const CHANGE_CONTEXT = 'dsh.change';
+const CHANGE_CONTEXT = 'changeLens.change';
 const ORIGINAL_SCHEME = 'dsh-original';
 
 const MAX_FILE_BYTES = 512 * 1024;
@@ -74,9 +74,9 @@ class LensProvider {
     const line = Math.max(0, Math.min(change.firstLine, document.lineCount - 1));
     const range = new vscode.Range(line, 0, line, 0);
     return [
-      new vscode.CodeLens(range, { title: '$(check) Оставить', command: 'dsh.acceptChange', tooltip: 'Ctrl+Alt+Enter' }),
-      new vscode.CodeLens(range, { title: '$(discard) Вернуть', command: 'dsh.revertChange', tooltip: 'Ctrl+Alt+Backspace' }),
-      new vscode.CodeLens(range, { title: '$(diff) Дифф', command: 'dsh.showChangeDiff', tooltip: 'Открыть полный дифф' }),
+      new vscode.CodeLens(range, { title: '$(check) Оставить', command: 'changeLens.acceptChange', tooltip: 'Ctrl+Alt+Enter' }),
+      new vscode.CodeLens(range, { title: '$(discard) Вернуть', command: 'changeLens.revertChange', tooltip: 'Ctrl+Alt+Backspace' }),
+      new vscode.CodeLens(range, { title: '$(diff) Дифф', command: 'changeLens.showChangeDiff', tooltip: 'Открыть полный дифф' }),
     ];
   }
 }
@@ -87,7 +87,7 @@ class Controller {
    */
   constructor(context) {
     this.context = context;
-    this.output = vscode.window.createOutputChannel('DeepSeek Harness');
+    this.output = vscode.window.createOutputChannel('Change Lens');
     this.decorations = new Decorations();
     this.tracker = new ChangeTracker();
 
@@ -108,17 +108,17 @@ class Controller {
     });
 
     this.status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-    this.status.command = 'dsh.reviewChanges';
+    this.status.command = 'changeLens.reviewChanges';
 
     this.acceptItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 102);
     this.acceptItem.text = '$(check) Оставить';
-    this.acceptItem.tooltip = 'Оставить изменение DeepSeek (Ctrl+Alt+Enter)';
-    this.acceptItem.command = 'dsh.acceptChange';
+    this.acceptItem.tooltip = 'Оставить изменение (Ctrl+Alt+Enter)';
+    this.acceptItem.command = 'changeLens.acceptChange';
 
     this.revertItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 101);
     this.revertItem.text = '$(discard) Вернуть';
     this.revertItem.tooltip = 'Вернуть файл к состоянию до правки (Ctrl+Alt+Backspace)';
-    this.revertItem.command = 'dsh.revertChange';
+    this.revertItem.command = 'changeLens.revertChange';
 
     this.watcher = vscode.workspace.createFileSystemWatcher('**/*');
     this.watcher.onDidChange((uri) => this.onDiskChanged(uri));
@@ -188,7 +188,7 @@ class Controller {
 
     this.log(`снимок готов: ${count} файлов из ${files.length}`);
     if (count > 0) {
-      vscode.window.setStatusBarMessage(`$(database) DSH: снимок ${count} файлов`, 4000);
+      vscode.window.setStatusBarMessage(`$(database) Change Lens: снимок ${count} файлов`, 4000);
     }
   }
 
@@ -388,14 +388,14 @@ class Controller {
       'vscode.diff',
       left,
       editor.document.uri,
-      `DSH · ${name}: было ↔ стало`,
+      `Change Lens · ${name}: было ↔ стало`,
     );
   }
 
   async reviewChanges() {
     const changes = this.tracker.list();
     if (changes.length === 0) {
-      vscode.window.showInformationMessage('Сейчас нет изменений, сделанных DeepSeek.');
+      vscode.window.showInformationMessage('Сейчас нет изменений, сделанных агентом.');
       return;
     }
 
@@ -471,18 +471,18 @@ class Controller {
 
   updateStatus() {
     const count = this.tracker.size;
-    this.status.text = count > 0 ? `$(diff) DSH · ${count}` : '$(sparkle) DSH';
+    this.status.text = count > 0 ? `$(diff) Change Lens · ${count}` : '$(sparkle) Change Lens';
     this.status.tooltip = count > 0
       ? `Изменено файлов: ${count}. Нажмите, чтобы посмотреть.`
-      : 'DeepSeek Harness: жду изменений файлов. Ctrl+Alt+Shift+D — список изменений.';
-    this.status.command = 'dsh.reviewChanges';
+      : 'Change Lens: жду изменений файлов. Ctrl+Alt+Shift+D — список изменений.';
+    this.status.command = 'changeLens.reviewChanges';
     this.status.show();
   }
 
   reportError(error) {
     this.log(`! ${error && error.stack ? error.stack : error}`);
     vscode.window
-      .showErrorMessage(`DSH: ${error && error.message ? error.message : error}`, 'Показать лог')
+      .showErrorMessage(`Change Lens: ${error && error.message ? error.message : error}`, 'Показать лог')
       .then((choice) => {
         if (choice === 'Показать лог') this.showOutput();
       });
@@ -503,11 +503,11 @@ function activate(context) {
   controller = new Controller(context);
   context.subscriptions.push(controller);
   context.subscriptions.push(
-    vscode.commands.registerCommand('dsh.acceptChange', () => controller.acceptChange()),
-    vscode.commands.registerCommand('dsh.revertChange', () => controller.revertChange()),
-    vscode.commands.registerCommand('dsh.showChangeDiff', () => controller.showChangeDiff()),
-    vscode.commands.registerCommand('dsh.reviewChanges', () => controller.reviewChanges()),
-    vscode.commands.registerCommand('dsh.showOutput', () => controller.showOutput()),
+    vscode.commands.registerCommand('changeLens.acceptChange', () => controller.acceptChange()),
+    vscode.commands.registerCommand('changeLens.revertChange', () => controller.revertChange()),
+    vscode.commands.registerCommand('changeLens.showChangeDiff', () => controller.showChangeDiff()),
+    vscode.commands.registerCommand('changeLens.reviewChanges', () => controller.reviewChanges()),
+    vscode.commands.registerCommand('changeLens.showOutput', () => controller.showOutput()),
   );
 
   return {

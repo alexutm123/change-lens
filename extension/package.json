@@ -1,9 +1,9 @@
 {
-  "name": "dsh-inline-edit",
-  "displayName": "DeepSeek Harness — Inline Diff",
-  "description": "Подсвечивает в VS Code изменения, которые DeepSeek Harness вносит в файлы: зелёные и красные строки, кнопки «Оставить» и «Вернуть». Работает локально, без запросов к ИИ.",
-  "version": "0.4.0",
-  "publisher": "deepseek-harness",
+  "name": "change-lens",
+  "displayName": "Change Lens",
+  "description": "Подсвечивает в VS Code изменения, которые агент вносит в файлы: зелёные и красные строки, кнопки «Оставить» и «Вернуть». Работает локально, без запросов к ИИ.",
+  "version": "0.5.0",
+  "publisher": "pilich",
   "license": "MIT",
   "engines": {
     "vscode": "^1.90.0"
@@ -12,11 +12,12 @@
     "Other"
   ],
   "keywords": [
+    "diff",
+    "inline diff",
+    "ai",
+    "agent",
     "deepseek",
     "harness",
-    "dsh",
-    "inline diff",
-    "diff",
     "copilot"
   ],
   "main": "./src/extension.js",
@@ -26,86 +27,86 @@
   "contributes": {
     "commands": [
       {
-        "command": "dsh.reviewChanges",
+        "command": "changeLens.reviewChanges",
         "title": "Изменённые файлы",
-        "category": "DeepSeek Harness",
+        "category": "Change Lens",
         "icon": "$(list-unordered)"
       },
       {
-        "command": "dsh.acceptChange",
+        "command": "changeLens.acceptChange",
         "title": "Оставить изменение",
-        "category": "DeepSeek Harness",
+        "category": "Change Lens",
         "icon": "$(check)"
       },
       {
-        "command": "dsh.revertChange",
+        "command": "changeLens.revertChange",
         "title": "Вернуть как было",
-        "category": "DeepSeek Harness",
+        "category": "Change Lens",
         "icon": "$(discard)"
       },
       {
-        "command": "dsh.showChangeDiff",
+        "command": "changeLens.showChangeDiff",
         "title": "Показать дифф изменения",
-        "category": "DeepSeek Harness",
+        "category": "Change Lens",
         "icon": "$(diff)"
       },
       {
-        "command": "dsh.showOutput",
+        "command": "changeLens.showOutput",
         "title": "Показать лог",
-        "category": "DeepSeek Harness",
+        "category": "Change Lens",
         "icon": "$(output)"
       }
     ],
     "menus": {
       "editor/context": [
         {
-          "command": "dsh.acceptChange",
+          "command": "changeLens.acceptChange",
           "group": "1_modification@1",
-          "when": "dsh.change"
+          "when": "changeLens.change"
         },
         {
-          "command": "dsh.revertChange",
+          "command": "changeLens.revertChange",
           "group": "1_modification@2",
-          "when": "dsh.change"
+          "when": "changeLens.change"
         },
         {
-          "command": "dsh.showChangeDiff",
+          "command": "changeLens.showChangeDiff",
           "group": "1_modification@3",
-          "when": "dsh.change"
+          "when": "changeLens.change"
         }
       ],
       "commandPalette": [
         {
-          "command": "dsh.acceptChange",
-          "when": "dsh.change"
+          "command": "changeLens.acceptChange",
+          "when": "changeLens.change"
         },
         {
-          "command": "dsh.revertChange",
-          "when": "dsh.change"
+          "command": "changeLens.revertChange",
+          "when": "changeLens.change"
         },
         {
-          "command": "dsh.showChangeDiff",
-          "when": "dsh.change"
+          "command": "changeLens.showChangeDiff",
+          "when": "changeLens.change"
         }
       ]
     },
     "keybindings": [
       {
-        "command": "dsh.reviewChanges",
+        "command": "changeLens.reviewChanges",
         "key": "ctrl+alt+shift+d",
         "mac": "cmd+alt+shift+d"
       },
       {
-        "command": "dsh.acceptChange",
+        "command": "changeLens.acceptChange",
         "key": "ctrl+alt+enter",
         "mac": "cmd+alt+enter",
-        "when": "dsh.change"
+        "when": "changeLens.change"
       },
       {
-        "command": "dsh.revertChange",
+        "command": "changeLens.revertChange",
         "key": "ctrl+alt+backspace",
         "mac": "cmd+alt+backspace",
-        "when": "dsh.change"
+        "when": "changeLens.change"
       }
     ]
   },

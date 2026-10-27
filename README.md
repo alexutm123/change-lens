@@ -1,30 +1,27 @@
-# DeepSeek Harness — Inline Diff для VS Code
+# Change Lens
 
-Расширение следит за файлами на диске и подсвечивает в VS Code то, что изменила модель:
-зелёные добавленные строки, красный «призрак» удалённых, кнопки **Оставить / Вернуть / Дифф**.
-Дифф считается локально по снимкам файлов — **без запросов к ИИ, без ключей, без настроек**.
+Расширение VS Code, которое показывает, что именно изменилось в файле: зелёные добавленные строки,
+красный «призрак» удалённых, кнопки **Оставить / Вернуть / Дифф**. Дифф считается локально по снимкам
+файлов — **без запросов к ИИ, без ключей, без настроек**.
 
-Работает с любым агентом, который пишет файлы: DeepSeek Harness, Claude Code, Cursor, Codex, git-скрипты.
-Изменения, сделанные git, автоматически не подсвечиваются.
+Работает с любым инструментом, который пишет файлы: DeepSeek Harness, Claude Code, Cursor, Codex,
+скрипты и генераторы. Изменения, сделанные git, автоматически не подсвечиваются.
 
 ## Установка для другого человека
 
 Нужен только VS Code **1.90 или новее**. Ни Node.js, ни npm, ни аккаунт DeepSeek — ничего.
 
-1. Скачать `dist/dsh-inline-edit-0.4.0.vsix` (или взять в Releases).
+1. Скачать `dist/change-lens-0.5.0.vsix` (или взять в Releases).
 2. В VS Code: `Ctrl+Shift+P` → **Extensions: Install from VSIX…** → выбрать файл.
    Либо из терминала:
 
    ```powershell
-   code --install-extension .\dsh-inline-edit-0.4.0.vsix --force
+   code --install-extension .\change-lens-0.5.0.vsix --force
    ```
 
 3. Перезапустить окно VS Code (**Developer: Reload Window**).
-4. Открыть проект папкой и работать в Harness. В статус-баре появится `✦ DSH`:
-   после первой же правки файла — `⑂ DSH · 1` и подсветка строк.
-
-Если VS Code не даёт установить из-за политики организации — включить
-`extensions.allowUnsigned` не нужно (пакет подписан не требует), достаточно разрешить установку из VSIX.
+4. Открыть проект папкой и работать в агенте. В статус-баре появится `✦ Change Lens`:
+   после первой же правки файла — `⑂ Change Lens · 1` и подсветка строк.
 
 ## Как это выглядит
 
@@ -47,6 +44,16 @@
 служебные каталоги (`node_modules`, `vendor`, `storage`, `dist`, `.git` и т.п.),
 файлы больше 512 КБ и двоичные.
 
+## Команды и клавиши
+
+| Действие | Как |
+| --- | --- |
+| Список изменённых файлов | `Ctrl+Alt+Shift+D` |
+| Оставить изменение | `Ctrl+Alt+Enter` |
+| Вернуть как было | `Ctrl+Alt+Backspace` |
+| Показать дифф | кнопка **Дифф** над блоком |
+| Лог расширения | `Change Lens: Показать лог` |
+
 ## Что где лежит
 
 | Путь | Что это |
@@ -63,7 +70,7 @@
 
 ```powershell
 node scripts/make-icon.mjs     # иконка (нужна только при смене картинки)
-node scripts/pack.mjs          # dist/dsh-inline-edit-0.4.0.vsix
+node scripts/pack.mjs          # dist/change-lens-0.5.0.vsix
 node test/diff.test.mjs        # 8  — LCS-дифф
 node test/tracker.test.mjs     # 10 — снимки, накопление, откат
 node test/render.test.mjs      # 4  — геометрия подсветки
@@ -73,12 +80,14 @@ node test/scenario.test.mjs    # 2  — изменение файла и игн�
 
 ## Публикация
 
-Репозиторий готов к выкладке: `git init`, `git add .`, `git commit`, `git remote add origin …`, `git push`.
-Файл `.vsix` в `dist/` стоит приложить к релизу на GitHub — так людям не нужен Node.js.
+```powershell
+git remote add origin https://github.com/<аккаунт>/change-lens.git
+git push -u origin main
+```
 
-Чтобы расширение ставилось одной командой из Marketplace (`code --install-extension <publisher>.dsh-inline-edit`),
-нужен аккаунт издателя (Azure DevOps → Personal Access Token) и `npx @vscode/vsce publish`;
-поля `publisher` в `extension/package.json` и в манифесте уже заполнены.
+Файл `.vsix` из `dist/` стоит приложить к релизу на GitHub — так людям не нужен Node.js.
+Для установки из Marketplace нужен аккаунт издателя: `publisher` в `extension/package.json` сейчас `pilich`,
+при публикации замени на своё имя издателя и выполни `npx @vscode/vsce publish`.
 
 ## Лицензия
 
