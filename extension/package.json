@@ -2,7 +2,7 @@
   "name": "change-lens",
   "displayName": "Change Lens",
   "description": "Highlights the changes an agent makes to your files right inside VS Code: green added lines, red deleted lines, Accept and Revert buttons. Local diffing — no AI requests, no API keys, no settings.",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "publisher": "pilich",
   "license": "MIT",
   "engines": {

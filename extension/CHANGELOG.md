@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.0
+
+- Back to CodeLens: inlay hints are not clickable in some VS Code builds, so the action row moved back to
+  a surface whose clicks the editor handles natively.
+- Added a More action that opens a menu with Accept / Revert / Diff.
+
 ## 0.7.0
 
 - Clicking anywhere on the action chip now opens an actions menu (Accept / Revert / Diff), so the controls

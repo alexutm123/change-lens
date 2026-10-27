@@ -55,19 +55,15 @@ test('статус-бар и CodeLens показывают изменение ф
     lineCount: 40,
     lineAt: () => ({ text: '    <div class="box">' }),
   };
-  const hints = vscode.__hintProvider.provideInlayHints(document, new vscode.Range(0, 0, 39, 0));
-  assert.equal(hints.length, 1, 'должен быть один чип с кнопками');
-
-  const actions = hints[0].label.filter((part) => part.command);
+  const lenses = vscode.__lensProvider.provideCodeLenses(document);
+  assert.equal(lenses.length, 4, 'должно быть четыре действия');
   assert.deepEqual(
-    actions.map((part) => part.command.command),
-    ['changeLens.acceptChange', 'changeLens.revertChange', 'changeLens.showChangeDiff'],
+    lenses.map((lens) => lens.command.command),
+    ['changeLens.acceptChange', 'changeLens.revertChange', 'changeLens.showChangeDiff', 'changeLens.showActions'],
   );
-  assert.equal(hints[0].position.line, 1, 'чип ставится в конец первой изменённой строки');
-  assert.equal(hints[0].position.character, '    <div class="box">'.length);
-  assert.match(actions[0].value, /Accept/);
-  assert.equal(hints[0].command.command, 'changeLens.showActions');
-  assert.deepEqual(hints[0].command.arguments, ['/src/a.php']);
+  assert.equal(lenses[0].range.start.line, 1, 'панель ставится над первой изменённой строкой');
+  assert.deepEqual(lenses[0].command.arguments, ['/src/a.php']);
+  assert.match(lenses[0].command.title, /Accept/);
 
   controller.tracker.accept('/src/a.php');
   controller.updateStatus();

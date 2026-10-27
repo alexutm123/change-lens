@@ -48,19 +48,19 @@ function fullRange(document) {
 }
 
 /**
- * Панель действий в виде «чипа» в конце первой изменённой строки.
+ * Панель действий над изменённым блоком.
  *
- * Inlay hints, в отличие от CodeLens, рисуются с фоном и поддерживают
- * кликабельные части — смотрится как кнопки, а не как серый текст.
+ * CodeLens выбран потому, что клики по нему обрабатывает сам редактор:
+ * inlay hints в некоторых сборках VS Code рисуются, но не реагируют на мышь.
  */
-class ToolbarProvider {
+class LensProvider {
   /**
    * @param {Controller} controller
    */
   constructor(controller) {
     this.controller = controller;
     this.emitter = new vscode.EventEmitter();
-    this.onDidChangeInlayHints = this.emitter.event;
+    this.onDidChangeCodeLenses = this.emitter.event;
   }
 
   refresh() {
@@ -69,51 +69,42 @@ class ToolbarProvider {
 
   /**
    * @param {vscode.TextDocument} document
-   * @param {vscode.Range} range
-   * @returns {vscode.InlayHint[]}
+   * @returns {vscode.CodeLens[]}
    */
-  provideInlayHints(document, range) {
+  provideCodeLenses(document) {
     const change = this.controller.changeFor(document.uri.fsPath);
     if (!change) return [];
 
     const line = Math.max(0, Math.min(change.firstLine, document.lineCount - 1));
-    if (line < range.start.line || line > range.end.line) return [];
+    const range = new vscode.Range(line, 0, line, 0);
+    const args = [document.uri.fsPath];
 
-    const text = document.lineAt(line).text;
-    const position = new vscode.Position(line, text.length);
-
-    /**
-     * @param {string} label
-     * @param {string} [command]
-     * @param {string} [tooltip]
-     */
-    const part = (label, command, tooltip) => {
-      const item = new vscode.InlayHintLabelPart(label);
-      if (command) {
-        item.command = { title: label.trim(), command, tooltip, arguments: [document.uri.fsPath] };
-      }
-      return item;
-    };
-
-    const hint = new vscode.InlayHint(position, [
-      part(' ✓ Accept ', 'changeLens.acceptChange', 'Accept this change (Ctrl+Alt+Enter)'),
-      part(' | '),
-      part(' ⟲ Revert ', 'changeLens.revertChange', 'Revert the file (Ctrl+Alt+Backspace)'),
-      part(' | '),
-      part(' ⧉ Diff ', 'changeLens.showChangeDiff', 'Open the full diff'),
-      part(' '),
-    ], vscode.InlayHintKind.Type);
-
-    // Клик по любому месту чипа открывает меню действий — на случай, если
-    // редактор не поддерживает клики по отдельным частям подсказки.
-    hint.command = {
-      title: 'Change Lens actions',
-      command: 'changeLens.showActions',
-      arguments: [document.uri.fsPath],
-    };
-    hint.paddingLeft = true;
-    hint.paddingRight = true;
-    return [hint];
+    return [
+      new vscode.CodeLens(range, {
+        title: '$(check) Accept',
+        command: 'changeLens.acceptChange',
+        arguments: args,
+        tooltip: 'Keep the change (Ctrl+Alt+Enter)',
+      }),
+      new vscode.CodeLens(range, {
+        title: '$(discard) Revert',
+        command: 'changeLens.revertChange',
+        arguments: args,
+        tooltip: 'Restore the file (Ctrl+Alt+Backspace)',
+      }),
+      new vscode.CodeLens(range, {
+        title: '$(diff) Diff',
+        command: 'changeLens.showChangeDiff',
+        arguments: args,
+        tooltip: 'Open the full diff',
+      }),
+      new vscode.CodeLens(range, {
+        title: '$(ellipsis) More',
+        command: 'changeLens.showActions',
+        arguments: args,
+        tooltip: 'More actions',
+      }),
+    ];
   }
 }
 
@@ -136,8 +127,8 @@ class Controller {
     /** @type {Map<string, number>} окна, в которых игнорируем события документа */
     this.suppressed = new Map();
 
-    this.toolbar = new ToolbarProvider(this);
-    this.toolbarRegistration = vscode.languages.registerInlayHintsProvider([{ scheme: 'file' }], this.toolbar);
+    this.lensProvider = new LensProvider(this);
+    this.lensRegistration = vscode.languages.registerCodeLensProvider([{ scheme: 'file' }], this.lensProvider);
 
     this.originalProvider = vscode.workspace.registerTextDocumentContentProvider(ORIGINAL_SCHEME, {
       provideTextDocumentContent: (uri) => this.originals.get(uri.query) ?? '',
@@ -188,7 +179,7 @@ class Controller {
   dispose() {
     for (const subscription of this.subscriptions) subscription.dispose();
     this.decorations.dispose();
-    this.toolbarRegistration.dispose();
+    this.lensRegistration.dispose();
     this.originalProvider.dispose();
     this.status.dispose();
     this.acceptItem.dispose();
@@ -554,7 +545,7 @@ class Controller {
   }
 
   refresh() {
-    this.toolbar.refresh();
+    this.lensProvider.refresh();
     this.updateStatus();
     this.updateContext();
   }
