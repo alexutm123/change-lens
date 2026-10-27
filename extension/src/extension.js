@@ -270,10 +270,13 @@ class Controller {
 
     if (this.isSuppressed(filePath)) return;
 
+    const change = this.tracker.get(filePath);
+
     if (document.isDirty) {
-      // Пользователь сам начал править файл — изменение считается принятым.
-      if (this.tracker.get(filePath)) {
-        this.tracker.accept(filePath);
+      // Правку не сбрасываем: пересчитываем дифф от исходной версии,
+      // чтобы подсветка и кнопки оставались на месте, пока файл не сохранён.
+      if (change) {
+        this.tracker.noteLiveEdit(filePath, document.getText());
         this.decorate(filePath);
         this.refresh();
       }
@@ -291,7 +294,7 @@ class Controller {
     if (document.uri.scheme !== 'file') return;
     const filePath = document.uri.fsPath;
     this.userSaves.set(filePath, Date.now());
-    this.tracker.noteLocalText(filePath, document.getText(), document.uri.toString());
+    this.tracker.noteSavedLocally(filePath, document.getText(), document.uri.toString());
     this.decorate(filePath);
     this.refresh();
   }
@@ -347,12 +350,7 @@ class Controller {
       this.decorations.clear(editor);
       return;
     }
-    // Файл правят вручную — подсветка чужого изменения только запутает.
-    if (editor.document.isDirty) {
-      this.decorations.clear(editor);
-      return;
-    }
-    // Документ ещё не перечитан с диска — дождёмся onDidChangeTextDocument.
+    // Текст не совпадает с тем, что мы записали, — ждём перечитывания с диска.
     if (!change.matchesText(editor.document.getText())) {
       this.decorations.clear(editor);
       return;
@@ -415,6 +413,15 @@ class Controller {
     if (!change) {
       vscode.window.showInformationMessage('There is no change to revert.');
       return;
+    }
+
+    if (document.isDirty) {
+      const choice = await vscode.window.showWarningMessage(
+        'Revert will discard your unsaved edits in this file.',
+        { modal: true },
+        'Revert anyway',
+      );
+      if (choice !== 'Revert anyway') return;
     }
 
     this.suppress(target, 4000);

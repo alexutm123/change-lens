@@ -51,15 +51,27 @@ test('трекер: без снимка изменение не выдумыва
   assert.equal(tracker.baseline(PATH), 'a\nb', 'база должна запомниться для следующего раза');
 });
 
-test('трекер: пользователь сохранил файл — изменение принято', () => {
+test('трекер: сохранение не закрывает разбор изменения', () => {
   const tracker = new ChangeTracker();
   tracker.setBaseline(PATH, 'a\nb');
   tracker.noteDisk(PATH, 'a\nB', 'file:///p');
   assert.equal(tracker.size, 1);
 
-  tracker.noteLocalText(PATH, 'a\nB');
-  assert.equal(tracker.size, 0);
+  tracker.noteSavedLocally(PATH, 'a\nB');
+  assert.equal(tracker.size, 1, 'изменение остаётся до Accept или Revert');
   assert.equal(tracker.baseline(PATH), 'a\nB');
+});
+
+test('трекер: живая правка пересчитывает дифф от исходной версии', () => {
+  const tracker = new ChangeTracker();
+  tracker.setBaseline(PATH, 'a\nb');
+  tracker.noteDisk(PATH, 'a\nB', 'file:///p');
+
+  const change = tracker.noteLiveEdit(PATH, 'a\nB\nc');
+  assert.ok(change);
+  assert.equal(change.after, 'a\nB\nc');
+  assert.equal(change.diff.added, 2);
+  assert.equal(tracker.size, 1);
 });
 
 test('трекер: откат возвращает исходный текст и базу', () => {

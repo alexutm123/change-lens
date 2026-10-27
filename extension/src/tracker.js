@@ -1,6 +1,7 @@
 'use strict';
 
 const { Change, normalize } = require('./change');
+const { diffLines } = require('./diff');
 
 /**
  * Хранилище «снимков» файлов и непринятых изменений.
@@ -67,6 +68,38 @@ class ChangeTracker {
     });
     this.changes.set(path, change);
     return change;
+  }
+
+  /**
+   * Пользователь правит файл, но ещё не сохранил. Дифф считаем заново
+   * от исходной версии, чтобы подсветка не пропадала на первом же нажатии.
+   * @param {string} path
+   * @param {string} text
+   * @returns {Change | undefined}
+   */
+  noteLiveEdit(path, text) {
+    const change = this.changes.get(path);
+    if (!change) return undefined;
+    change.after = text;
+    change.diff = diffLines(change.before, text);
+    return change;
+  }
+
+  /**
+   * Пользователь сохранил файл. Снимок обновляем, но разбор изменения
+   * не закрываем — оно снимается только кнопками Accept или Revert.
+   * @param {string} path
+   * @param {string} text
+   * @param {string} [uri]
+   */
+  noteSavedLocally(path, text, uri) {
+    this.baselines.set(path, text);
+    if (uri) this.uris.set(path, uri);
+    const change = this.changes.get(path);
+    if (change) {
+      change.after = text;
+      change.diff = diffLines(change.before, text);
+    }
   }
 
   /**

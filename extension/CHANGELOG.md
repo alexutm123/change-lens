@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.0
+
+- Editing the file no longer drops the review: the diff is recomputed live from the original snapshot, so
+  highlighting and the action row stay put while you type.
+- Saving keeps the review open too — it is closed only by Accept or Revert.
+- Revert asks for confirmation when the file has unsaved edits.
+
 ## 0.8.0
 
 - Back to CodeLens: inlay hints are not clickable in some VS Code builds, so the action row moved back to
