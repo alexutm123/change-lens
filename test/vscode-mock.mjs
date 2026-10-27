@@ -51,6 +51,21 @@ export function installVscodeMock() {
         this.command = command;
       }
     },
+    InlayHint: class {
+      constructor(position, label, kind) {
+        this.position = position;
+        this.label = label;
+        this.kind = kind;
+        this.paddingLeft = false;
+        this.paddingRight = false;
+      }
+    },
+    InlayHintLabelPart: class {
+      constructor(value) {
+        this.value = value;
+      }
+    },
+    InlayHintKind: { Text: 1, Type: 2, Parameter: 3 },
     MarkdownString: class {
       appendMarkdown() { return this; }
       appendCodeblock() { return this; }
@@ -142,6 +157,10 @@ export function installVscodeMock() {
     languages: {
       registerCodeLensProvider: (_selector, provider) => {
         vscode.__lensProvider = provider;
+        return { dispose() {} };
+      },
+      registerInlayHintsProvider: (_selector, provider) => {
+        vscode.__hintProvider = provider;
         return { dispose() {} };
       },
     },

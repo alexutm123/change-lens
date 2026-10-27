@@ -48,16 +48,19 @@ function fullRange(document) {
 }
 
 /**
- * Панель кнопок над изменённым блоком.
+ * Панель действий в виде «чипа» в конце первой изменённой строки.
+ *
+ * Inlay hints, в отличие от CodeLens, рисуются с фоном и поддерживают
+ * кликабельные части — смотрится как кнопки, а не как серый текст.
  */
-class LensProvider {
+class ToolbarProvider {
   /**
    * @param {Controller} controller
    */
   constructor(controller) {
     this.controller = controller;
     this.emitter = new vscode.EventEmitter();
-    this.onDidChangeCodeLenses = this.emitter.event;
+    this.onDidChangeInlayHints = this.emitter.event;
   }
 
   refresh() {
@@ -66,18 +69,42 @@ class LensProvider {
 
   /**
    * @param {vscode.TextDocument} document
-   * @returns {vscode.CodeLens[]}
+   * @param {vscode.Range} range
+   * @returns {vscode.InlayHint[]}
    */
-  provideCodeLenses(document) {
+  provideInlayHints(document, range) {
     const change = this.controller.changeFor(document.uri.fsPath);
     if (!change) return [];
+
     const line = Math.max(0, Math.min(change.firstLine, document.lineCount - 1));
-    const range = new vscode.Range(line, 0, line, 0);
-    return [
-      new vscode.CodeLens(range, { title: '$(check) Accept', command: 'changeLens.acceptChange', tooltip: 'Ctrl+Alt+Enter' }),
-      new vscode.CodeLens(range, { title: '$(discard) Revert', command: 'changeLens.revertChange', tooltip: 'Ctrl+Alt+Backspace' }),
-      new vscode.CodeLens(range, { title: '$(diff) Diff', command: 'changeLens.showChangeDiff', tooltip: 'Open the full diff' }),
-    ];
+    if (line < range.start.line || line > range.end.line) return [];
+
+    const text = document.lineAt(line).text;
+    const position = new vscode.Position(line, text.length);
+
+    /**
+     * @param {string} label
+     * @param {string} [command]
+     * @param {string} [tooltip]
+     */
+    const part = (label, command, tooltip) => {
+      const item = new vscode.InlayHintLabelPart(label);
+      if (command) item.command = { title: label, command, tooltip };
+      return item;
+    };
+
+    const hint = new vscode.InlayHint(position, [
+      part(' ✓ Accept ', 'changeLens.acceptChange', 'Accept this change (Ctrl+Alt+Enter)'),
+      part(' | '),
+      part(' ⟲ Revert ', 'changeLens.revertChange', 'Revert the file (Ctrl+Alt+Backspace)'),
+      part(' | '),
+      part(' ⧉ Diff ', 'changeLens.showChangeDiff', 'Open the full diff'),
+      part(' '),
+    ], vscode.InlayHintKind.Type);
+
+    hint.paddingLeft = true;
+    hint.paddingRight = true;
+    return [hint];
   }
 }
 
@@ -100,8 +127,8 @@ class Controller {
     /** @type {Map<string, number>} окна, в которых игнорируем события документа */
     this.suppressed = new Map();
 
-    this.lensProvider = new LensProvider(this);
-    this.lensRegistration = vscode.languages.registerCodeLensProvider([{ scheme: 'file' }], this.lensProvider);
+    this.toolbar = new ToolbarProvider(this);
+    this.toolbarRegistration = vscode.languages.registerInlayHintsProvider([{ scheme: 'file' }], this.toolbar);
 
     this.originalProvider = vscode.workspace.registerTextDocumentContentProvider(ORIGINAL_SCHEME, {
       provideTextDocumentContent: (uri) => this.originals.get(uri.query) ?? '',
@@ -152,7 +179,7 @@ class Controller {
   dispose() {
     for (const subscription of this.subscriptions) subscription.dispose();
     this.decorations.dispose();
-    this.lensRegistration.dispose();
+    this.toolbarRegistration.dispose();
     this.originalProvider.dispose();
     this.status.dispose();
     this.acceptItem.dispose();
@@ -451,7 +478,7 @@ class Controller {
   }
 
   refresh() {
-    this.lensProvider.refresh();
+    this.toolbar.refresh();
     this.updateStatus();
     this.updateContext();
   }

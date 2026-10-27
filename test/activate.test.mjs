@@ -49,17 +49,22 @@ test('статус-бар и CodeLens показывают изменение ф
   const main = statusItems[0];
   assert.match(main.text, /Change Lens · 1/);
 
-  const lenses = vscode.__lensProvider.provideCodeLenses({
+  const document = {
     uri: { fsPath: '/src/a.php', toString: () => 'file:///src/a.php' },
     lineCount: 40,
-  });
-  assert.equal(lenses.length, 3);
+    lineAt: () => ({ text: '    <div class="box">' }),
+  };
+  const hints = vscode.__hintProvider.provideInlayHints(document, new vscode.Range(0, 0, 39, 0));
+  assert.equal(hints.length, 1, 'должен быть один чип с кнопками');
+
+  const actions = hints[0].label.filter((part) => part.command);
   assert.deepEqual(
-    lenses.map((lens) => lens.command.command),
+    actions.map((part) => part.command.command),
     ['changeLens.acceptChange', 'changeLens.revertChange', 'changeLens.showChangeDiff'],
   );
-  assert.equal(lenses[0].range.start.line, 1);
-  assert.match(lenses[0].command.title, /Accept/);
+  assert.equal(hints[0].position.line, 1, 'чип ставится в конец первой изменённой строки');
+  assert.equal(hints[0].position.character, '    <div class="box">'.length);
+  assert.match(actions[0].value, /Accept/);
 
   controller.tracker.accept('/src/a.php');
   controller.updateStatus();

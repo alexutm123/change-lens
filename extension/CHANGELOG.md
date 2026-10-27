@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.0
+
+- The action row (Accept / Revert / Diff) is now an inlay hint instead of CodeLens: it gets a background
+  chip and stays clickable, so it reads as buttons rather than grey text.
+
 ## 0.5.0
 
 - Renamed to **Change Lens** (was "DeepSeek Harness — Inline Diff").
