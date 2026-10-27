@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1128" height="400" viewBox="0 0 1128 400" role="img" aria-label="Change Lens — inline diff for the code AI agents write">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#070c18"/>
+      <stop offset="1" stop-color="#0d1730"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.28" cy="0.32" r="0.62">
+      <stop offset="0" stop-color="#24458a" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#24458a" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#5B7CFF"/>
+      <stop offset="0.6" stop-color="#8A5BFF"/>
+      <stop offset="1" stop-color="#5B7CFF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="win" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#101c3a"/>
+      <stop offset="1" stop-color="#0a1226"/>
+    </linearGradient>
+    <linearGradient id="titleGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#C9D6F5"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1128" height="400" fill="url(#bg)"/>
+  <rect width="1128" height="400" fill="url(#glow)"/>
+  <rect x="0" y="0" width="1128" height="3" fill="url(#accent)"/>
+
+  <!-- left: text -->
+  <text x="72" y="164" font-family="'Segoe UI', -apple-system, Roboto, Helvetica, Arial, sans-serif"
+        font-size="72" font-weight="700" letter-spacing="-2" fill="url(#titleGrad)">Change Lens</text>
+
+  <text x="74" y="210" font-family="'Segoe UI', -apple-system, Roboto, Helvetica, Arial, sans-serif"
+        font-size="23" fill="#9FB0D0">See what your agent changed</text>
+
+  <text x="74" y="248" font-family="'Segoe UI', -apple-system, Roboto, Helvetica, Arial, sans-serif"
+        font-size="15.5" fill="#6E80A6">Green added · red deleted · Accept or Revert · no AI calls</text>
+
+  <!-- pills -->
+  <g font-family="'Segoe UI', -apple-system, Roboto, Helvetica, Arial, sans-serif" font-size="13" fill="#C6D3EA">
+    <rect x="74" y="282" width="116" height="32" rx="16" fill="#101B36" stroke="#24345C"/>
+    <circle cx="94" cy="298" r="4" fill="#3FB950"/>
+    <text x="106" y="303">live diff</text>
+
+    <rect x="202" y="282" width="126" height="32" rx="16" fill="#101B36" stroke="#24345C"/>
+    <rect x="218" y="293" width="9" height="7" rx="1.5" fill="none" stroke="#C6D3EA" stroke-width="1.4"/>
+    <path d="M220.5 293v-2.6a2 2 0 0 1 4 0V293" fill="none" stroke="#C6D3EA" stroke-width="1.4"/>
+    <text x="236" y="303">local only</text>
+
+    <rect x="340" y="282" width="120" height="32" rx="16" fill="#101B36" stroke="#24345C"/>
+    <circle cx="360" cy="298" r="4" fill="none" stroke="#C6D3EA" stroke-width="1.4"/>
+    <path d="M356.5 298h7M360 294.5v7" stroke="#C6D3EA" stroke-width="1.4"/>
+    <text x="374" y="303">git-aware</text>
+  </g>
+
+  <!-- right: mock editor -->
+  <g>
+    <rect x="636" y="88" width="428" height="248" rx="16" fill="url(#win)" stroke="#223258" stroke-width="1.5"/>
+    <circle cx="660" cy="112" r="6" fill="#FF5F57"/>
+    <circle cx="682" cy="112" r="6" fill="#FEBC2E"/>
+    <circle cx="704" cy="112" r="6" fill="#28C840"/>
+
+    <rect x="656" y="132" width="170" height="28" rx="8" fill="#16224A"/>
+    <text x="672" y="151" font-family="'Segoe UI', -apple-system, Roboto, Helvetica, Arial, sans-serif"
+          font-size="13" fill="#9FB0D0">cart.ts</text>
+    <text x="742" y="151" font-family="'Segoe UI', -apple-system, Roboto, Helvetica, Arial, sans-serif"
+          font-size="13" fill="#5B7CFF">≡ diff</text>
+
+    <!-- row 1 -->
+    <text x="662" y="178" font-family="'Segoe UI', monospace" font-size="11" fill="#4C5E86">12</text>
+    <rect x="690" y="170" width="212" height="8" rx="4" fill="#22335C"/>
+    <!-- row 2 -->
+    <text x="662" y="202" font-family="'Segoe UI', monospace" font-size="11" fill="#4C5E86">13</text>
+    <rect x="690" y="194" width="268" height="8" rx="4" fill="#22335C"/>
+    <!-- row 3: removed -->
+    <rect x="650" y="212" width="402" height="20" rx="4" fill="#F85149" fill-opacity="0.16"/>
+    <rect x="650" y="212" width="3" height="20" fill="#F85149"/>
+    <text x="662" y="226" font-family="'Segoe UI', monospace" font-size="11" fill="#FF9C94">14</text>
+    <rect x="690" y="218" width="196" height="8" rx="4" fill="#8C3A3A"/>
+    <text x="988" y="227" font-family="'Segoe UI', -apple-system, Roboto, Helvetica, Arial, sans-serif"
+          font-size="12" fill="#FF7B72">− removed</text>
+    <!-- row 4: added -->
+    <rect x="650" y="236" width="402" height="20" rx="4" fill="#3FB950" fill-opacity="0.18"/>
+    <rect x="650" y="236" width="3" height="20" fill="#3FB950"/>
+    <text x="662" y="250" font-family="'Segoe UI', monospace" font-size="11" fill="#8FE0A0">15</text>
+    <rect x="690" y="242" width="232" height="8" rx="4" fill="#2F6B45"/>
+    <text x="1000" y="251" font-family="'Segoe UI', -apple-system, Roboto, Helvetica, Arial, sans-serif"
+          font-size="12" fill="#56D364">+ added</text>
+    <!-- row 5 -->
+    <text x="662" y="274" font-family="'Segoe UI', monospace" font-size="11" fill="#4C5E86">16</text>
+    <rect x="690" y="266" width="176" height="8" rx="4" fill="#22335C"/>
+
+    <!-- status chip -->
+    <rect x="656" y="292" width="230" height="26" rx="13" fill="#10203C" stroke="#1F3358"/>
+    <circle cx="674" cy="305" r="4" fill="#3FB950"/>
+    <text x="686" y="310" font-family="'Segoe UI', -apple-system, Roboto, Helvetica, Arial, sans-serif"
+          font-size="12" fill="#9FD8B0">Change Lens · 1 file changed</text>
+  </g>
+</svg>
