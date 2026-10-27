@@ -1,0 +1,13 @@
+# зависимости не используются, но на всякий случай
+node_modules/
+
+# временные файлы тестов
+.tmp-scenario/
+.tmp-scenario-git/
+.vscode-test/
+
+# логи и локальные настройки
+*.log
+.vscode/settings.json
+.DS_Store
+Thumbs.db

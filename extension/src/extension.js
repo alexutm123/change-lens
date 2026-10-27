@@ -1,0 +1,529 @@
+'use strict';
+
+const vscode = require('vscode');
+const path = require('node:path');
+const fsp = require('node:fs/promises');
+
+const { ChangeTracker } = require('./tracker');
+const { Decorations } = require('./render');
+
+const CHANGE_CONTEXT = 'dsh.change';
+const ORIGINAL_SCHEME = 'dsh-original';
+
+const MAX_FILE_BYTES = 512 * 1024;
+const MAX_PRIME_FILES = 20_000;
+const SELF_WRITE_MS = 5_000;
+const USER_SAVE_MS = 1_500;
+/** Сколько времени после обращения git к своему каталогу считаем, что файлы меняет git. */
+const GIT_QUIET_MS = 5_000;
+
+/** Каталоги, которые не имеет смысла снимать и подсвечивать. */
+const PRIME_EXCLUDE = '**/{node_modules,vendor,.git,.svn,storage,dist,build,coverage,public/build,bootstrap/cache}/**';
+
+/** Те же каталоги как сегменты пути — для событий файловой системы. */
+const IGNORED_SEGMENTS = new Set([
+  'node_modules', 'vendor', '.git', '.svn', 'storage', 'dist', 'build', 'coverage', 'bootstrap',
+]);
+
+/**
+ * @param {string} filePath
+ * @returns {boolean}
+ */
+function isIgnored(filePath) {
+  const parts = filePath.split(/[\\/]/);
+  for (let index = 0; index < parts.length - 1; index += 1) {
+    if (IGNORED_SEGMENTS.has(parts[index])) return true;
+  }
+  return false;
+}
+
+/**
+ * Полный диапазон документа.
+ * @param {vscode.TextDocument} document
+ * @returns {vscode.Range}
+ */
+function fullRange(document) {
+  const last = Math.max(0, document.lineCount - 1);
+  return new vscode.Range(0, 0, last, document.lineAt(last).text.length);
+}
+
+/**
+ * Панель кнопок над изменённым блоком.
+ */
+class LensProvider {
+  /**
+   * @param {Controller} controller
+   */
+  constructor(controller) {
+    this.controller = controller;
+    this.emitter = new vscode.EventEmitter();
+    this.onDidChangeCodeLenses = this.emitter.event;
+  }
+
+  refresh() {
+    this.emitter.fire();
+  }
+
+  /**
+   * @param {vscode.TextDocument} document
+   * @returns {vscode.CodeLens[]}
+   */
+  provideCodeLenses(document) {
+    const change = this.controller.changeFor(document.uri.fsPath);
+    if (!change) return [];
+    const line = Math.max(0, Math.min(change.firstLine, document.lineCount - 1));
+    const range = new vscode.Range(line, 0, line, 0);
+    return [
+      new vscode.CodeLens(range, { title: '$(check) Оставить', command: 'dsh.acceptChange', tooltip: 'Ctrl+Alt+Enter' }),
+      new vscode.CodeLens(range, { title: '$(discard) Вернуть', command: 'dsh.revertChange', tooltip: 'Ctrl+Alt+Backspace' }),
+      new vscode.CodeLens(range, { title: '$(diff) Дифф', command: 'dsh.showChangeDiff', tooltip: 'Открыть полный дифф' }),
+    ];
+  }
+}
+
+class Controller {
+  /**
+   * @param {vscode.ExtensionContext} context
+   */
+  constructor(context) {
+    this.context = context;
+    this.output = vscode.window.createOutputChannel('DeepSeek Harness');
+    this.decorations = new Decorations();
+    this.tracker = new ChangeTracker();
+
+    /** @type {Map<string, string>} id изменения → содержимое до правки (для вкладки диффа) */
+    this.originals = new Map();
+    /** @type {Map<string, number>} наши собственные записи на диск */
+    this.selfWrites = new Map();
+    /** @type {Map<string, number>} сохранения из самого VS Code */
+    this.userSaves = new Map();
+    /** @type {Map<string, number>} окна, в которых игнорируем события документа */
+    this.suppressed = new Map();
+
+    this.lensProvider = new LensProvider(this);
+    this.lensRegistration = vscode.languages.registerCodeLensProvider([{ scheme: 'file' }], this.lensProvider);
+
+    this.originalProvider = vscode.workspace.registerTextDocumentContentProvider(ORIGINAL_SCHEME, {
+      provideTextDocumentContent: (uri) => this.originals.get(uri.query) ?? '',
+    });
+
+    this.status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+    this.status.command = 'dsh.reviewChanges';
+
+    this.acceptItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 102);
+    this.acceptItem.text = '$(check) Оставить';
+    this.acceptItem.tooltip = 'Оставить изменение DeepSeek (Ctrl+Alt+Enter)';
+    this.acceptItem.command = 'dsh.acceptChange';
+
+    this.revertItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 101);
+    this.revertItem.text = '$(discard) Вернуть';
+    this.revertItem.tooltip = 'Вернуть файл к состоянию до правки (Ctrl+Alt+Backspace)';
+    this.revertItem.command = 'dsh.revertChange';
+
+    this.watcher = vscode.workspace.createFileSystemWatcher('**/*');
+    this.watcher.onDidChange((uri) => this.onDiskChanged(uri));
+    this.watcher.onDidCreate((uri) => this.onDiskChanged(uri));
+
+    // Git перед правкой файлов трогает свой служебный каталог — по этим событиям
+    // понимаем, что сейчас идут pull/checkout/merge, и не подсвечиваем их.
+    this.gitUntil = 0;
+    this.gitWatcher = vscode.workspace.createFileSystemWatcher('**/.git/**');
+    this.gitWatcher.onDidChange(() => this.noteGitActivity());
+    this.gitWatcher.onDidCreate(() => this.noteGitActivity());
+    this.gitWatcher.onDidDelete(() => this.noteGitActivity());
+
+    this.subscriptions = [
+      this.watcher,
+      this.gitWatcher,
+      vscode.workspace.onDidChangeTextDocument((event) => this.onDocumentChanged(event)),
+      vscode.workspace.onDidSaveTextDocument((document) => this.onDocumentSaved(document)),
+      vscode.workspace.onDidOpenTextDocument((document) => this.onDocumentOpened(document)),
+      vscode.window.onDidChangeActiveTextEditor((editor) => this.onActiveEditorChanged(editor)),
+      vscode.window.onDidChangeActiveColorTheme(() => this.onThemeChanged()),
+    ];
+
+    this.updateStatus();
+    this.status.show();
+    vscode.commands.executeCommand('setContext', CHANGE_CONTEXT, false);
+
+    this.primeSnapshots().catch((error) => this.log(`снимок не удался: ${error && error.message ? error.message : error}`));
+  }
+
+  dispose() {
+    for (const subscription of this.subscriptions) subscription.dispose();
+    this.decorations.dispose();
+    this.lensRegistration.dispose();
+    this.originalProvider.dispose();
+    this.status.dispose();
+    this.acceptItem.dispose();
+    this.revertItem.dispose();
+    this.output.dispose();
+  }
+
+  // ------------------------------------------------------------ наблюдение
+
+  /**
+   * Запомнить исходное состояние файлов, чтобы потом было с чем сравнивать.
+   */
+  async primeSnapshots() {
+    const files = await vscode.workspace.findFiles('**/*', PRIME_EXCLUDE, MAX_PRIME_FILES);
+    const chunk = 24;
+    let count = 0;
+
+    for (let index = 0; index < files.length; index += chunk) {
+      const slice = files.slice(index, index + chunk);
+      await Promise.all(slice.map(async (uri) => {
+        try {
+          const stat = await vscode.workspace.fs.stat(uri);
+          if (!(stat.type & vscode.FileType.File) || stat.size > MAX_FILE_BYTES) return;
+          const bytes = await vscode.workspace.fs.readFile(uri);
+          if (bytes.includes(0)) return;
+          this.tracker.setBaseline(uri.fsPath, Buffer.from(bytes).toString('utf8'));
+          count += 1;
+        } catch {
+          /* файл мог исчезнуть — это не ошибка */
+        }
+      }));
+    }
+
+    this.log(`снимок готов: ${count} файлов из ${files.length}`);
+    if (count > 0) {
+      vscode.window.setStatusBarMessage(`$(database) DSH: снимок ${count} файлов`, 4000);
+    }
+  }
+
+  /**
+   * @param {vscode.Uri} uri
+   */
+  async onDiskChanged(uri) {
+    if (uri.scheme !== 'file') return;
+    const filePath = uri.fsPath;
+    if (isIgnored(filePath)) return;
+    const now = Date.now();
+
+    if ((this.selfWrites.get(filePath) || 0) > now) return;
+    if ((this.userSaves.get(filePath) || 0) + USER_SAVE_MS > now) return;
+
+    const document = vscode.workspace.textDocuments.find((doc) => doc.uri.fsPath === filePath);
+    if (document && document.isDirty) return;
+
+    let text;
+    try {
+      const stat = await fsp.stat(filePath);
+      if (!stat.isFile() || stat.size > MAX_FILE_BYTES) return;
+      text = await fsp.readFile(filePath, 'utf8');
+    } catch {
+      return;
+    }
+    if (text.includes('\u0000')) return;
+
+    // Идёт git-операция: просто обновляем снимок, чтобы её результат не всплыл потом.
+    if (Date.now() < this.gitUntil) {
+      this.tracker.noteLocalText(filePath, text, uri.toString());
+      this.decorate(filePath);
+      this.refresh();
+      return;
+    }
+
+    const change = this.tracker.noteDisk(filePath, text, uri.toString());
+    if (change) {
+      this.log(`правка: ${vscode.workspace.asRelativePath(filePath)} ${change.summary}`);
+      this.decorate(filePath);
+    }
+    this.refresh();
+  }
+
+  /**
+   * @param {vscode.TextDocumentChangeEvent} event
+   */
+  onDocumentChanged(event) {
+    const document = event.document;
+    if (document.uri.scheme !== 'file') return;
+    const filePath = document.uri.fsPath;
+
+    if (this.isSuppressed(filePath)) return;
+
+    if (document.isDirty) {
+      // Пользователь сам начал править файл — изменение считается принятым.
+      if (this.tracker.get(filePath)) {
+        this.tracker.accept(filePath);
+        this.decorate(filePath);
+        this.refresh();
+      }
+      return;
+    }
+
+    // Документ перечитан с диска — перерисовываем подсветку под новое содержимое.
+    this.decorate(filePath);
+  }
+
+  /**
+   * @param {vscode.TextDocument} document
+   */
+  onDocumentSaved(document) {
+    if (document.uri.scheme !== 'file') return;
+    const filePath = document.uri.fsPath;
+    this.userSaves.set(filePath, Date.now());
+    this.tracker.noteLocalText(filePath, document.getText(), document.uri.toString());
+    this.decorate(filePath);
+    this.refresh();
+  }
+
+  /**
+   * @param {vscode.TextDocument} document
+   */
+  onDocumentOpened(document) {
+    if (document.uri.scheme !== 'file') return;
+    if (!this.tracker.get(document.uri.fsPath)) return;
+    Promise.resolve().then(() => this.decorate(document.uri.fsPath));
+  }
+
+  /**
+   * @param {vscode.TextEditor | undefined} editor
+   */
+  onActiveEditorChanged(editor) {
+    if (editor) this.decorateEditor(editor);
+    this.updateContext();
+  }
+
+  onThemeChanged() {
+    this.decorations.dispose();
+    for (const editor of vscode.window.visibleTextEditors) this.decorateEditor(editor);
+  }
+
+  // ------------------------------------------------------------- подсветка
+
+  /**
+   * @param {string} filePath
+   * @returns {import('./change').Change | undefined}
+   */
+  changeFor(filePath) {
+    return this.tracker.get(filePath);
+  }
+
+  /**
+   * @param {string} filePath
+   */
+  async decorate(filePath) {
+    const editor = vscode.window.visibleTextEditors.find((item) => item.document.uri.fsPath === filePath);
+    if (editor) await this.decorateEditor(editor);
+    this.updateContext();
+  }
+
+  /**
+   * @param {vscode.TextEditor} editor
+   */
+  async decorateEditor(editor) {
+    const filePath = editor.document.uri.fsPath;
+    const change = this.tracker.get(filePath);
+    if (!change) {
+      this.decorations.clear(editor);
+      return;
+    }
+    // Файл правят вручную — подсветка чужого изменения только запутает.
+    if (editor.document.isDirty) {
+      this.decorations.clear(editor);
+      return;
+    }
+    // Документ ещё не перечитан с диска — дождёмся onDidChangeTextDocument.
+    if (!change.matchesText(editor.document.getText())) {
+      this.decorations.clear(editor);
+      return;
+    }
+    await this.decorations.apply(editor, change);
+  }
+
+  // --------------------------------------------------------------- команды
+
+  async acceptChange() {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) return;
+    const filePath = editor.document.uri.fsPath;
+    if (!this.tracker.get(filePath)) return;
+    this.tracker.accept(filePath);
+    this.decorations.clear(editor);
+    this.refresh();
+    vscode.window.setStatusBarMessage('$(check) Изменение оставлено', 3000);
+  }
+
+  async revertChange() {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) return;
+    const filePath = editor.document.uri.fsPath;
+    const change = this.tracker.get(filePath);
+    if (!change) {
+      vscode.window.showInformationMessage('Нет изменения, которое можно вернуть.');
+      return;
+    }
+
+    const document = editor.document;
+    this.suppress(filePath, 4000);
+    this.selfWrites.set(filePath, Date.now() + SELF_WRITE_MS);
+
+    const edit = new vscode.WorkspaceEdit();
+    edit.replace(document.uri, fullRange(document), change.before);
+    const applied = await vscode.workspace.applyEdit(edit);
+    if (applied) await document.save();
+
+    this.tracker.revert(filePath);
+    this.decorations.clear(editor);
+    this.refresh();
+    vscode.window.setStatusBarMessage('$(history) Файл возвращён к состоянию до правки', 4000);
+  }
+
+  async showChangeDiff() {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) return;
+    const filePath = editor.document.uri.fsPath;
+    const change = this.tracker.get(filePath);
+    if (!change) {
+      vscode.window.showInformationMessage('В этом файле нет неразобранных изменений.');
+      return;
+    }
+
+    this.originals.set(change.id, change.before);
+    const name = path.basename(filePath) || 'файл';
+    const left = vscode.Uri.parse(`${ORIGINAL_SCHEME}:/${encodeURI(name)}`).with({ query: change.id });
+    await vscode.commands.executeCommand(
+      'vscode.diff',
+      left,
+      editor.document.uri,
+      `DSH · ${name}: было ↔ стало`,
+    );
+  }
+
+  async reviewChanges() {
+    const changes = this.tracker.list();
+    if (changes.length === 0) {
+      vscode.window.showInformationMessage('Сейчас нет изменений, сделанных DeepSeek.');
+      return;
+    }
+
+    const items = changes.map((change) => ({
+      label: `$(file) ${vscode.workspace.asRelativePath(change.path)}`,
+      description: change.summary,
+      detail: 'изменено на диске',
+      change,
+    }));
+
+    const picked = await vscode.window.showQuickPick(items, {
+      title: `Изменено файлов: ${changes.length}`,
+      placeHolder: 'Выберите файл, чтобы открыть его с подсветкой',
+    });
+    if (!picked) return;
+
+    const document = await vscode.workspace.openTextDocument(vscode.Uri.file(picked.change.path));
+    const editor = await vscode.window.showTextDocument(document, { preview: false });
+    await this.decorateEditor(editor);
+    this.updateContext();
+  }
+
+  showOutput() {
+    this.output.show(true);
+  }
+
+  // ------------------------------------------------------------- сервисное
+
+  /**
+   * @param {string} filePath
+   * @param {number} ms
+   */
+  suppress(filePath, ms) {
+    this.suppressed.set(filePath, Date.now() + ms);
+  }
+
+  /**
+   * Git тронул свой служебный каталог — значит, сейчас переписывает файлы.
+   */
+  noteGitActivity() {
+    const now = Date.now();
+    const wasQuiet = this.gitUntil < now;
+    this.gitUntil = now + GIT_QUIET_MS;
+    if (wasQuiet) this.log('git: идёт операция — её изменения не подсвечиваем');
+  }
+
+  /**
+   * @param {string} filePath
+   * @returns {boolean}
+   */
+  isSuppressed(filePath) {
+    return (this.suppressed.get(filePath) || 0) > Date.now();
+  }
+
+  refresh() {
+    this.lensProvider.refresh();
+    this.updateStatus();
+    this.updateContext();
+  }
+
+  updateContext() {
+    const editor = vscode.window.activeTextEditor;
+    const hasChange = !!(editor && this.tracker.get(editor.document.uri.fsPath));
+    vscode.commands.executeCommand('setContext', CHANGE_CONTEXT, hasChange);
+    if (hasChange) {
+      this.acceptItem.show();
+      this.revertItem.show();
+    } else {
+      this.acceptItem.hide();
+      this.revertItem.hide();
+    }
+  }
+
+  updateStatus() {
+    const count = this.tracker.size;
+    this.status.text = count > 0 ? `$(diff) DSH · ${count}` : '$(sparkle) DSH';
+    this.status.tooltip = count > 0
+      ? `Изменено файлов: ${count}. Нажмите, чтобы посмотреть.`
+      : 'DeepSeek Harness: жду изменений файлов. Ctrl+Alt+Shift+D — список изменений.';
+    this.status.command = 'dsh.reviewChanges';
+    this.status.show();
+  }
+
+  reportError(error) {
+    this.log(`! ${error && error.stack ? error.stack : error}`);
+    vscode.window
+      .showErrorMessage(`DSH: ${error && error.message ? error.message : error}`, 'Показать лог')
+      .then((choice) => {
+        if (choice === 'Показать лог') this.showOutput();
+      });
+  }
+
+  log(message) {
+    this.output.appendLine(`[${new Date().toISOString()}] ${message}`);
+  }
+}
+
+/** @type {Controller | undefined} */
+let controller;
+
+/**
+ * @param {vscode.ExtensionContext} context
+ */
+function activate(context) {
+  controller = new Controller(context);
+  context.subscriptions.push(controller);
+  context.subscriptions.push(
+    vscode.commands.registerCommand('dsh.acceptChange', () => controller.acceptChange()),
+    vscode.commands.registerCommand('dsh.revertChange', () => controller.revertChange()),
+    vscode.commands.registerCommand('dsh.showChangeDiff', () => controller.showChangeDiff()),
+    vscode.commands.registerCommand('dsh.reviewChanges', () => controller.reviewChanges()),
+    vscode.commands.registerCommand('dsh.showOutput', () => controller.showOutput()),
+  );
+
+  return {
+    controller,
+    acceptChange: () => controller.acceptChange(),
+    revertChange: () => controller.revertChange(),
+    reviewChanges: () => controller.reviewChanges(),
+    tracker: controller.tracker,
+  };
+}
+
+function deactivate() {
+  if (controller) {
+    controller.dispose();
+    controller = undefined;
+  }
+}
+
+module.exports = { activate, deactivate };

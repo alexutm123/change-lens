@@ -1,0 +1,115 @@
+{
+  "name": "dsh-inline-edit",
+  "displayName": "DeepSeek Harness — Inline Diff",
+  "description": "Подсвечивает в VS Code изменения, которые DeepSeek Harness вносит в файлы: зелёные и красные строки, кнопки «Оставить» и «Вернуть». Работает локально, без запросов к ИИ.",
+  "version": "0.4.0",
+  "publisher": "deepseek-harness",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "deepseek",
+    "harness",
+    "dsh",
+    "inline diff",
+    "diff",
+    "copilot"
+  ],
+  "main": "./src/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "dsh.reviewChanges",
+        "title": "Изменённые файлы",
+        "category": "DeepSeek Harness",
+        "icon": "$(list-unordered)"
+      },
+      {
+        "command": "dsh.acceptChange",
+        "title": "Оставить изменение",
+        "category": "DeepSeek Harness",
+        "icon": "$(check)"
+      },
+      {
+        "command": "dsh.revertChange",
+        "title": "Вернуть как было",
+        "category": "DeepSeek Harness",
+        "icon": "$(discard)"
+      },
+      {
+        "command": "dsh.showChangeDiff",
+        "title": "Показать дифф изменения",
+        "category": "DeepSeek Harness",
+        "icon": "$(diff)"
+      },
+      {
+        "command": "dsh.showOutput",
+        "title": "Показать лог",
+        "category": "DeepSeek Harness",
+        "icon": "$(output)"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "dsh.acceptChange",
+          "group": "1_modification@1",
+          "when": "dsh.change"
+        },
+        {
+          "command": "dsh.revertChange",
+          "group": "1_modification@2",
+          "when": "dsh.change"
+        },
+        {
+          "command": "dsh.showChangeDiff",
+          "group": "1_modification@3",
+          "when": "dsh.change"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "dsh.acceptChange",
+          "when": "dsh.change"
+        },
+        {
+          "command": "dsh.revertChange",
+          "when": "dsh.change"
+        },
+        {
+          "command": "dsh.showChangeDiff",
+          "when": "dsh.change"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "dsh.reviewChanges",
+        "key": "ctrl+alt+shift+d",
+        "mac": "cmd+alt+shift+d"
+      },
+      {
+        "command": "dsh.acceptChange",
+        "key": "ctrl+alt+enter",
+        "mac": "cmd+alt+enter",
+        "when": "dsh.change"
+      },
+      {
+        "command": "dsh.revertChange",
+        "key": "ctrl+alt+backspace",
+        "mac": "cmd+alt+backspace",
+        "when": "dsh.change"
+      }
+    ]
+  },
+  "scripts": {
+    "pack": "node scripts/pack.mjs"
+  }
+}
