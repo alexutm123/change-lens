@@ -74,9 +74,9 @@ class LensProvider {
     const line = Math.max(0, Math.min(change.firstLine, document.lineCount - 1));
     const range = new vscode.Range(line, 0, line, 0);
     return [
-      new vscode.CodeLens(range, { title: '$(check) Оставить', command: 'changeLens.acceptChange', tooltip: 'Ctrl+Alt+Enter' }),
-      new vscode.CodeLens(range, { title: '$(discard) Вернуть', command: 'changeLens.revertChange', tooltip: 'Ctrl+Alt+Backspace' }),
-      new vscode.CodeLens(range, { title: '$(diff) Дифф', command: 'changeLens.showChangeDiff', tooltip: 'Открыть полный дифф' }),
+      new vscode.CodeLens(range, { title: '$(check) Accept', command: 'changeLens.acceptChange', tooltip: 'Ctrl+Alt+Enter' }),
+      new vscode.CodeLens(range, { title: '$(discard) Revert', command: 'changeLens.revertChange', tooltip: 'Ctrl+Alt+Backspace' }),
+      new vscode.CodeLens(range, { title: '$(diff) Diff', command: 'changeLens.showChangeDiff', tooltip: 'Open the full diff' }),
     ];
   }
 }
@@ -111,13 +111,13 @@ class Controller {
     this.status.command = 'changeLens.reviewChanges';
 
     this.acceptItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 102);
-    this.acceptItem.text = '$(check) Оставить';
-    this.acceptItem.tooltip = 'Оставить изменение (Ctrl+Alt+Enter)';
+    this.acceptItem.text = '$(check) Accept';
+    this.acceptItem.tooltip = 'Accept this change (Ctrl+Alt+Enter)';
     this.acceptItem.command = 'changeLens.acceptChange';
 
     this.revertItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 101);
-    this.revertItem.text = '$(discard) Вернуть';
-    this.revertItem.tooltip = 'Вернуть файл к состоянию до правки (Ctrl+Alt+Backspace)';
+    this.revertItem.text = '$(discard) Revert';
+    this.revertItem.tooltip = 'Revert the file to its previous state (Ctrl+Alt+Backspace)';
     this.revertItem.command = 'changeLens.revertChange';
 
     this.watcher = vscode.workspace.createFileSystemWatcher('**/*');
@@ -146,7 +146,7 @@ class Controller {
     this.status.show();
     vscode.commands.executeCommand('setContext', CHANGE_CONTEXT, false);
 
-    this.primeSnapshots().catch((error) => this.log(`снимок не удался: ${error && error.message ? error.message : error}`));
+    this.primeSnapshots().catch((error) => this.log(`snapshot failed: ${error && error.message ? error.message : error}`));
   }
 
   dispose() {
@@ -186,9 +186,9 @@ class Controller {
       }));
     }
 
-    this.log(`снимок готов: ${count} файлов из ${files.length}`);
+    this.log(`snapshot ready: ${count} files out of ${files.length}`);
     if (count > 0) {
-      vscode.window.setStatusBarMessage(`$(database) Change Lens: снимок ${count} файлов`, 4000);
+      vscode.window.setStatusBarMessage(`$(database) Change Lens: ${count} files snapshotted`, 4000);
     }
   }
 
@@ -227,7 +227,7 @@ class Controller {
 
     const change = this.tracker.noteDisk(filePath, text, uri.toString());
     if (change) {
-      this.log(`правка: ${vscode.workspace.asRelativePath(filePath)} ${change.summary}`);
+      this.log(`change: ${vscode.workspace.asRelativePath(filePath)} ${change.summary}`);
       this.decorate(filePath);
     }
     this.refresh();
@@ -343,7 +343,7 @@ class Controller {
     this.tracker.accept(filePath);
     this.decorations.clear(editor);
     this.refresh();
-    vscode.window.setStatusBarMessage('$(check) Изменение оставлено', 3000);
+    vscode.window.setStatusBarMessage('$(check) Change accepted', 3000);
   }
 
   async revertChange() {
@@ -352,7 +352,7 @@ class Controller {
     const filePath = editor.document.uri.fsPath;
     const change = this.tracker.get(filePath);
     if (!change) {
-      vscode.window.showInformationMessage('Нет изменения, которое можно вернуть.');
+      vscode.window.showInformationMessage('There is no change to revert.');
       return;
     }
 
@@ -368,7 +368,7 @@ class Controller {
     this.tracker.revert(filePath);
     this.decorations.clear(editor);
     this.refresh();
-    vscode.window.setStatusBarMessage('$(history) Файл возвращён к состоянию до правки', 4000);
+    vscode.window.setStatusBarMessage('$(history) File reverted', 4000);
   }
 
   async showChangeDiff() {
@@ -377,38 +377,38 @@ class Controller {
     const filePath = editor.document.uri.fsPath;
     const change = this.tracker.get(filePath);
     if (!change) {
-      vscode.window.showInformationMessage('В этом файле нет неразобранных изменений.');
+      vscode.window.showInformationMessage('No pending changes in this file.');
       return;
     }
 
     this.originals.set(change.id, change.before);
-    const name = path.basename(filePath) || 'файл';
+    const name = path.basename(filePath) || 'file';
     const left = vscode.Uri.parse(`${ORIGINAL_SCHEME}:/${encodeURI(name)}`).with({ query: change.id });
     await vscode.commands.executeCommand(
       'vscode.diff',
       left,
       editor.document.uri,
-      `Change Lens · ${name}: было ↔ стало`,
+      `Change Lens · ${name}: before ↔ after`,
     );
   }
 
   async reviewChanges() {
     const changes = this.tracker.list();
     if (changes.length === 0) {
-      vscode.window.showInformationMessage('Сейчас нет изменений, сделанных агентом.');
+      vscode.window.showInformationMessage('No changes made by an agent right now.');
       return;
     }
 
     const items = changes.map((change) => ({
       label: `$(file) ${vscode.workspace.asRelativePath(change.path)}`,
       description: change.summary,
-      detail: 'изменено на диске',
+      detail: 'changed on disk',
       change,
     }));
 
     const picked = await vscode.window.showQuickPick(items, {
-      title: `Изменено файлов: ${changes.length}`,
-      placeHolder: 'Выберите файл, чтобы открыть его с подсветкой',
+      title: `Files changed: ${changes.length}`,
+      placeHolder: 'Pick a file to open with highlighting',
     });
     if (!picked) return;
 
@@ -439,7 +439,7 @@ class Controller {
     const now = Date.now();
     const wasQuiet = this.gitUntil < now;
     this.gitUntil = now + GIT_QUIET_MS;
-    if (wasQuiet) this.log('git: идёт операция — её изменения не подсвечиваем');
+    if (wasQuiet) this.log('git: operation in progress, its changes are suppressed');
   }
 
   /**
@@ -473,8 +473,8 @@ class Controller {
     const count = this.tracker.size;
     this.status.text = count > 0 ? `$(diff) Change Lens · ${count}` : '$(sparkle) Change Lens';
     this.status.tooltip = count > 0
-      ? `Изменено файлов: ${count}. Нажмите, чтобы посмотреть.`
-      : 'Change Lens: жду изменений файлов. Ctrl+Alt+Shift+D — список изменений.';
+      ? `Files changed: ${count}. Click to review.`
+      : 'Change Lens: watching for file changes. Ctrl+Alt+Shift+D — review changes.';
     this.status.command = 'changeLens.reviewChanges';
     this.status.show();
   }
@@ -482,9 +482,9 @@ class Controller {
   reportError(error) {
     this.log(`! ${error && error.stack ? error.stack : error}`);
     vscode.window
-      .showErrorMessage(`Change Lens: ${error && error.message ? error.message : error}`, 'Показать лог')
+      .showErrorMessage(`Change Lens: ${error && error.message ? error.message : error}`, 'Show Log')
       .then((choice) => {
-        if (choice === 'Показать лог') this.showOutput();
+        if (choice === 'Show Log') this.showOutput();
       });
   }
 

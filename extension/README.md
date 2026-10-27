@@ -1,65 +1,49 @@
 # Change Lens
 
-Вы пишете задачу агенту, он правит файлы — а в VS Code сами подсвечиваются изменённые строки:
-добавленные зелёным, удалённые красным зачёркнутым «призраком», сверху кнопки **Оставить** и **Вернуть**.
+Shows exactly what changed in a file, right inside VS Code: added lines in green, deleted lines as a red
+struck-through ghost, with **Accept**, **Revert** and **Diff** buttons above the block.
 
-Расширение ничего не спрашивает и никуда не отправляет. Оно сравнивает снимок файла с тем, что
-появилось на диске, и считает дифф локально. **Никаких запросов к ИИ, ключей и настроек.**
+Everything is local. No AI requests, no API keys, no settings — the extension compares a snapshot of the
+file with what appeared on disk and computes the diff itself.
+
+Works with any tool that writes files: DeepSeek Harness, Claude Code, Cursor, Codex, scripts, generators.
+Changes made by git are ignored automatically.
 
 ```
- 3    <div>{!! $message !!}</div>                    ⌫ удалено (красным, зачёркнуто)
- ✓ Оставить   ⟲ Вернуть   ⇆ Дифф
+ 3    <div>{!! $message !!}</div>                    ⌫ deleted (red, struck through)
+ ✓ Accept   ⟲ Revert   ⇆ Diff
  4 +  <div class="hint">
- 5 +      Проверьте домен в личном кабинете.
+ 5 +      Check the domain in your dashboard.
  6 +  </div>
 ```
 
-## Что делает
+## How to use it
 
-1. При запуске VS Code запоминает содержимое файлов рабочей папки (снимок).
-2. Любая программа меняет файл на диске — VS Code перечитывает его.
-3. Расширение сравнивает новое содержимое со снимком и рисует построчный дифф.
-4. Кнопки: **Оставить** — забыть изменение; **Вернуть** — восстановить файл на диске;
-   **Дифф** — открыть обычное сравнение в отдельной вкладке.
+1. Open your project in VS Code **as a folder**.
+2. Reload the window after installing (a new extension is not picked up by an already open window).
+3. Work with your agent; it edits files on disk.
+4. Changed lines are highlighted and buttons appear above the block.
 
-## Установка
-
-```powershell
-code --install-extension .\dist\change-lens-0.5.0.vsix --force
-```
-
-Один раз перезапустить окно VS Code (новое расширение не подхватывается в уже открытом окне).
-Проект должен быть открыт папкой. Больше ничего не требуется.
-
-## Что вы увидите
-
-| Элемент | Значение |
+| Action | How |
 | --- | --- |
-| Зелёные строки | добавлено |
-| Красный зачёркнутый текст в конце строки | удалено (полный текст — при наведении) |
-| Панель `✓ Оставить · ⟲ Вернуть · ⇆ Дифф` | действия над изменением |
-| `⑂ Change Lens · 3` в статус-баре | изменено файлов, клик — список |
-| `Ctrl+Alt+Shift+D` | список изменённых файлов |
+| List of changed files | `Ctrl+Alt+Shift+D` or click `⑂ Change Lens` in the status bar |
+| Accept a change | `Ctrl+Alt+Enter` |
+| Revert the file | `Ctrl+Alt+Backspace` |
+| Full diff in a separate tab | **Diff** button above the block |
+| Extension log | Command palette → **Change Lens: Show Log** |
 
-Горячие клавиши: `Ctrl+Alt+Enter` — оставить, `Ctrl+Alt+Backspace` — вернуть.
+Status bar: `✦ Change Lens` means no pending changes, `⑂ Change Lens · 2` means two files changed.
 
-## Ограничения (честно)
+## Limitations (honest ones)
 
-- **Снимок делается при запуске VS Code.** Изменения, сделанные при закрытом редакторе, сравнивать
-  не с чем — их не будет видно. Открыли VS Code, потом работаете в агенте — всё видно.
-- **Файл должен быть открыт**, чтобы подсветка была видна сразу. Иначе изменение попадёт в счётчик
-  в статус-баре, а подсветка появится при открытии файла.
-- **Настоящие красные строки** стороннему расширению VS Code нарисовать нельзя — это внутренний API
-  Copilot. Поэтому удалённое показывается «призраком», а полный дифф открывается кнопкой **Дифф**.
-- `node_modules`, `vendor`, `storage`, `dist`, `build`, `.git` и подобные каталоги не отслеживаются.
-- **Git не подсвечивается:** пока git трогает свой служебный каталог (признак `pull`, `checkout`,
-  `merge`, `rebase`, `stash`), изменения считаются «чужими» и не рисуются — снимок просто обновляется.
-  Через 5 секунд тишины в `.git` подсветка снова работает.
-- Файлы больше 512 КБ и двоичные пропускаются.
-- Если вы сами правите или сохраняете файл — изменение считается принятым, подсветка снимается.
-
-## Статус-бар
-
-`✦ Change Lens` — изменений нет. `⑂ Change Lens · 2` — изменилось два файла, клик открывает список.
-Нажимать и настраивать ничего не нужно.
-
+- **The snapshot is taken when VS Code starts.** Anything changed while the editor was closed has nothing
+  to compare against. Open VS Code first, then work with the agent.
+- **The file has to be open** for the highlight to appear immediately; otherwise it shows up when you open
+  the file and is always counted in the status bar.
+- **Real red lines are impossible** for third-party extensions — that is Copilot's private API. Deleted
+  lines are shown as a ghost; the **Diff** button opens a normal diff tab.
+- `node_modules`, `vendor`, `storage`, `dist`, `build`, `.git` and similar folders are skipped, as are files
+  larger than 512 KB and binary files.
+- **Git is ignored:** while git touches its own directory, changes are treated as external and the snapshot
+  is just updated. Five seconds after `.git` goes quiet, highlighting works again.
+- If you edit or save the file yourself, the change counts as accepted and the highlight is cleared.

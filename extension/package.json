@@ -1,7 +1,7 @@
 {
   "name": "change-lens",
   "displayName": "Change Lens",
-  "description": "Подсвечивает в VS Code изменения, которые агент вносит в файлы: зелёные и красные строки, кнопки «Оставить» и «Вернуть». Работает локально, без запросов к ИИ.",
+  "description": "Highlights the changes an agent makes to your files right inside VS Code: green added lines, red deleted lines, Accept and Revert buttons. Local diffing — no AI requests, no API keys, no settings.",
   "version": "0.5.0",
   "publisher": "pilich",
   "license": "MIT",
@@ -28,31 +28,31 @@
     "commands": [
       {
         "command": "changeLens.reviewChanges",
-        "title": "Изменённые файлы",
+        "title": "Review Changed Files",
         "category": "Change Lens",
         "icon": "$(list-unordered)"
       },
       {
         "command": "changeLens.acceptChange",
-        "title": "Оставить изменение",
+        "title": "Accept Change",
         "category": "Change Lens",
         "icon": "$(check)"
       },
       {
         "command": "changeLens.revertChange",
-        "title": "Вернуть как было",
+        "title": "Revert Change",
         "category": "Change Lens",
         "icon": "$(discard)"
       },
       {
         "command": "changeLens.showChangeDiff",
-        "title": "Показать дифф изменения",
+        "title": "Show Change Diff",
         "category": "Change Lens",
         "icon": "$(diff)"
       },
       {
         "command": "changeLens.showOutput",
-        "title": "Показать лог",
+        "title": "Show Log",
         "category": "Change Lens",
         "icon": "$(output)"
       }

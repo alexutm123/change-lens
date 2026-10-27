@@ -1,66 +1,65 @@
-# Разработка Change Lens
+# Developing Change Lens
 
-Всё для того, кто меняет код расширения. Пользователю это не нужно — ему достаточно
-[README](README.md) и файла `.vsix`.
+Everything for whoever edits the extension code. End users only need [README](README.md) and the `.vsix` file.
 
-## Структура
+## Layout
 
-| Путь | Что это |
+| Path | What it is |
 | --- | --- |
-| `extension/src/extension.js` | наблюдатель за диском, команды, статус-бар, CodeLens |
-| `extension/src/tracker.js` | снимки файлов и накопление изменений (чистая логика, без `vscode`) |
-| `extension/src/change.js` | одно изменение: было/стало + дифф |
-| `extension/src/render.js` | подсветка: зелёные строки, красный «призрак», цвета под тему |
-| `extension/src/diff.js` | построчный LCS-дифф без зависимостей |
-| `scripts/pack.mjs` | сборка `.vsix` собственным ZIP-писателем (без npm) |
-| `scripts/make-icon.mjs` | генерация иконки 128×128 без библиотек |
-| `test/` | 26 тестов на заглушке API VS Code |
+| `extension/src/extension.js` | file-system watcher, commands, status bar, CodeLens |
+| `extension/src/tracker.js` | file snapshots and pending changes (pure logic, no `vscode`) |
+| `extension/src/change.js` | one change: before/after plus its diff |
+| `extension/src/render.js` | decorations: green lines, red ghost, theme-aware colours |
+| `extension/src/diff.js` | line-based LCS diff with no dependencies |
+| `scripts/pack.mjs` | `.vsix` builder with its own ZIP writer (no npm) |
+| `scripts/make-icon.mjs` | generates the 128×128 icon with no libraries |
+| `test/` | 26 tests running against a mocked VS Code API |
 
-Зависимостей нет: ни npm-пакетов, ни сборки. VS Code грузит `extension/src/*.js` как есть.
+No dependencies: no npm packages, no build step. VS Code loads `extension/src/*.js` as they are.
 
-## Сборка пакета
+## Build
 
 ```powershell
-node scripts/make-icon.mjs     # иконка (нужна только при смене картинки)
-node scripts/pack.mjs          # dist/change-lens-<версия>.vsix
+node scripts/make-icon.mjs     # icon (only needed when the artwork changes)
+node scripts/pack.mjs          # dist/change-lens-<version>.vsix
 ```
 
-Версия берётся из `extension/package.json`. После сборки установить:
+The version comes from `extension/package.json`. Install the result:
 
 ```powershell
 code --install-extension .\dist\change-lens-0.5.0.vsix --force
 ```
 
-## Тесты
+## Tests
 
 ```powershell
-node test/diff.test.mjs        # 8  — LCS-дифф
-node test/tracker.test.mjs     # 10 — снимки, накопление, откат
-node test/render.test.mjs      # 4  — геометрия подсветки
-node test/activate.test.mjs    # 2  — активация на заглушке VS Code API
-node test/scenario.test.mjs    # 2  — изменение файла и игнорирование git
+node test/diff.test.mjs        # 8  — LCS diff
+node test/tracker.test.mjs     # 10 — snapshots, accumulation, revert
+node test/render.test.mjs      # 4  — decoration geometry
+node test/activate.test.mjs    # 2  — activation against a mock VS Code API
+node test/scenario.test.mjs    # 2  — real file change and git suppression
 ```
 
-`test/vscode-mock.mjs` подменяет модуль `vscode`, поэтому всё запускается обычным Node.
-Интеграция с настоящим VS Code не автоматизирована — проверяется вручную.
+`test/vscode-mock.mjs` replaces the `vscode` module, so everything runs in plain Node.
+Integration with the real VS Code is not automated and is checked by hand.
 
-## Как это работает внутри
+## How it works inside
 
-1. `activate` создаёт `Controller`, тот снимает снимок файлов рабочей папки (`findFiles` + `fs.stat`/`readFile`).
-2. `createFileSystemWatcher('**/*')` ловит записи на диск; отдельный watcher `**/.git/**` — операции git.
-3. `ChangeTracker` сравнивает новый текст со снимком, `Change` считает дифф.
-4. `Decorations` рисует whole-line подсветку и `after`-«призрака» удалённых строк.
-5. CodeLens-провайдер отдаёт кнопки для документа, у которого есть изменение.
+1. `activate` creates a `Controller`, which snapshots the workspace (`findFiles` + `fs.stat`/`readFile`).
+2. `createFileSystemWatcher('**/*')` catches writes to disk; a second watcher on `**/.git/**` catches git operations.
+3. `ChangeTracker` compares the new text with the snapshot; `Change` computes the diff.
+4. `Decorations` renders whole-line highlights and an `after` ghost for deleted lines.
+5. The CodeLens provider returns buttons for any document that has a pending change.
 
-## Публикация
+## Publishing
 
 ```powershell
-git remote add origin https://github.com/<аккаунт>/change-lens.git
+git remote add origin https://github.com/<account>/change-lens.git
 git push -u origin main
 ```
 
-Файл `.vsix` из `dist/` стоит приложить к релизу на GitHub — так людям не нужен Node.js.
+Attach the `.vsix` from `dist/` to a GitHub release — that way users do not need Node.js.
 
-Для Marketplace: `publisher` в `extension/package.json` сейчас `pilich` — замени на своё имя издателя,
-затем `npx @vscode/vsce publish`. После публикации менять `name` и `publisher` нельзя: изменится id,
-и установленные расширения перестанут обновляться.
+For the Marketplace: `publisher` in `extension/package.json` is currently `pilich` — replace it with your
+publisher name, then run `npx @vscode/vsce publish`. After publishing, `name` and `publisher` can no longer
+change: the extension id would change and existing installs would stop receiving updates.

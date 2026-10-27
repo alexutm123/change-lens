@@ -135,9 +135,9 @@ class Decorations {
         if (anchorLine >= document.lineCount) continue;
 
         const hover = new vscode.MarkdownString();
-        hover.appendMarkdown(`**Удалено строк: ${hunk.removedCount}**\n\n`);
+        hover.appendMarkdown(`**Deleted lines: ${hunk.removedCount}**\n\n`);
         hover.appendCodeblock(hunk.removed.join('\n'), document.languageId);
-        hover.appendMarkdown('\nОставить — `Ctrl+Alt+Enter`, вернуть — `Ctrl+Alt+Backspace`.');
+        hover.appendMarkdown('\nAccept — `Ctrl+Alt+Enter`, revert — `Ctrl+Alt+Backspace`.');
 
         ghost.push({
           range: new vscode.Range(anchorLine, 0, anchorLine, document.lineAt(anchorLine).text.length),

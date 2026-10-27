@@ -59,7 +59,7 @@ test('статус-бар и CodeLens показывают изменение ф
     ['changeLens.acceptChange', 'changeLens.revertChange', 'changeLens.showChangeDiff'],
   );
   assert.equal(lenses[0].range.start.line, 1);
-  assert.match(lenses[0].command.title, /Оставить/);
+  assert.match(lenses[0].command.title, /Accept/);
 
   controller.tracker.accept('/src/a.php');
   controller.updateStatus();
