@@ -24,7 +24,9 @@ green lines for additions, a red struck-through ghost for deletions, and two but
 **Revert**. No AI, no keys, no configuration: it compares a snapshot with what landed on disk.
 
 <div align="center">
-  <img src="docs/snippet.svg" alt="Change Lens in action: green added lines, red struck-through deleted line, Accept and Revert buttons" width="100%">
+  <img src="docs/snippet.svg" alt="Change Lens in action: green added lines, red struck-through deleted line, and the CodeLens row with Accept, Revert and Diff" width="100%">
+  <sub>Illustration of the real UI: <b>Accept</b>, <b>Revert</b> and <b>Diff</b> are CodeLens links above the changed block;
+  the colours follow your editor theme.</sub>
 </div>
 
 Works with any tool that writes files — DeepSeek Harness, Claude Code, Cursor, Codex, scripts,
