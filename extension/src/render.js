@@ -42,13 +42,27 @@ function paletteName(kind) {
 }
 
 /**
+ * Текст «призрака» удалённых строк.
+ *
+ * Одна строка — показываем её целиком (с обрезкой), несколько — честно
+ * показываем счётчик, а не склеенный обрубок: полный список всё равно
+ * лежит в подсказке при наведении.
+ *
  * @param {string[]} lines
  * @returns {string}
  */
 function ghostText(lines) {
-  const joined = lines.map((line) => line.trim()).filter(Boolean).join(' ↵ ');
-  if (joined.length <= MAX_GHOST_CHARS) return joined;
-  return `${joined.slice(0, MAX_GHOST_CHARS - 1)}…`;
+  const visible = lines.map((line) => line.trim()).filter(Boolean);
+  if (visible.length === 0) return '';
+  if (visible.length === 1) {
+    const line = visible[0];
+    return line.length <= MAX_GHOST_CHARS ? line : `${line.slice(0, MAX_GHOST_CHARS - 1)}…`;
+  }
+
+  const first = visible[0];
+  const head = first.length <= 54 ? first : `${first.slice(0, 53)}…`;
+  const rest = visible.length - 1;
+  return `${head}  +${rest} ${rest === 1 ? 'line' : 'lines'}`;
 }
 
 class Decorations {

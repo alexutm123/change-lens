@@ -24,9 +24,9 @@ green lines for additions, a red struck-through ghost for deletions, and two but
 **Revert**. No AI, no keys, no configuration: it compares a snapshot with what landed on disk.
 
 <div align="center">
-  <img src="docs/snippet.svg" alt="Change Lens in action: green added lines, red struck-through deleted line, and the CodeLens row with Accept, Revert and Diff" width="100%">
-  <sub>Illustration of the real UI: <b>Accept</b>, <b>Revert</b> and <b>Diff</b> are CodeLens links above the changed block;
-  the colours follow your editor theme.</sub>
+  <img src="docs/screenshot.png" alt="Change Lens in VS Code: green added lines, the red struck-through ghost of a deleted block, and the Accept / Revert / Diff row above it" width="100%">
+  <sub>A real change in VS Code: added lines are green, a deleted block shows up as a red struck-through ghost,
+  and <b>Accept</b> / <b>Revert</b> / <b>Diff</b> sit right above the block.</sub>
 </div>
 
 Works with any tool that writes files — DeepSeek Harness, Claude Code, Cursor, Codex, scripts,

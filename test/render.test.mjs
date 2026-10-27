@@ -108,6 +108,26 @@ test('подсветка: удаление в начале файла стави
   decorations.dispose();
 });
 
+test('подсветка: несколько удалённых строк показываются счётчиком, а не обрубком', async () => {
+  const change = new Change({
+    id: '5',
+    path: '/sample.php',
+    uri: 'file:///sample.php',
+    before: 'a\nb\nc\nd\ne',
+    after: 'a\ne',
+  });
+  const editor = fakeEditor(fakeDocument(['a', 'e']));
+
+  const decorations = new Decorations();
+  await decorations.apply(editor, change);
+
+  const ghostCall = editor.calls.find((call) => call.type.options.after !== undefined);
+  const ghost = ghostCall.decorations[0];
+  assert.match(ghost.renderOptions.after.contentText, /⌫ b/);
+  assert.match(ghost.renderOptions.after.contentText, /\+2 lines/, 'должен быть счётчик удалённых строк');
+  decorations.dispose();
+});
+
 test('дифф: сравнение текста не зависит от переводов строк', () => {
   const change = new Change({
     id: '4',
