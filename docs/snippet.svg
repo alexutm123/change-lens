@@ -1,64 +1,55 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="980" height="280" viewBox="0 0 980 280" role="img" aria-label="Change Lens in action: green added lines, red deleted ghost, Accept and Revert buttons">
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="262" viewBox="0 0 980 262" role="img" aria-label="Change Lens in action: green added lines, a red struck-through deleted line, and the CodeLens row with Accept, Revert and Diff">
   <defs>
     <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#171310"/>
       <stop offset="1" stop-color="#0f0c0a"/>
     </linearGradient>
-    <linearGradient id="fadeRight" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0.55" stop-color="#d98b7a" stop-opacity="1"/>
-      <stop offset="1" stop-color="#d98b7a" stop-opacity="0"/>
-    </linearGradient>
   </defs>
 
-  <rect x="0.5" y="0.5" width="979" height="279" rx="16" fill="url(#card)" stroke="#2e241b"/>
+  <rect x="0.5" y="0.5" width="979" height="261" rx="16" fill="url(#card)" stroke="#2e241b"/>
 
   <!-- header -->
-  <circle cx="30" cy="31" r="4" fill="#e8a33d"/>
-  <text x="44" y="36" font-family="'SF Mono', Consolas, 'Cascadia Mono', Menlo, monospace" font-size="12.5" fill="#9a846c">invalid-domain.blade.php</text>
-  <text x="950" y="36" text-anchor="end" font-family="'Segoe UI', system-ui, sans-serif" font-size="11" letter-spacing="1.6" fill="#6b5a48">BLADE · DIFF</text>
-  <line x1="1" y1="54" x2="979" y2="54" stroke="#2e241b"/>
+  <circle cx="30" cy="30" r="4" fill="#e8a33d"/>
+  <text x="44" y="35" font-family="'SF Mono', Consolas, 'Cascadia Mono', Menlo, monospace" font-size="12.5" fill="#9a846c">invalid-domain.blade.php</text>
+  <text x="950" y="35" text-anchor="end" font-family="'Segoe UI', system-ui, sans-serif" font-size="11" letter-spacing="1.6" fill="#6b5a48">BLADE · DIFF</text>
+  <line x1="1" y1="52" x2="979" y2="52" stroke="#2e241b"/>
 
-  <!-- row 1: context + deleted ghost -->
-  <text x="28" y="88" font-family="'SF Mono', Consolas, 'Cascadia Mono', Menlo, monospace" font-size="13" fill="#5f5044">3</text>
-  <text x="64" y="88" font-family="'SF Mono', Consolas, 'Cascadia Mono', Menlo, monospace" font-size="15" fill="#e3d8c9" xml:space="preserve">&lt;div&gt;{!! $message !!}&lt;/div&gt;</text>
-  <text x="384" y="87" font-family="'SF Mono', Consolas, 'Cascadia Mono', Menlo, monospace" font-size="13" fill="#d98b7a" text-decoration="line-through" opacity="0.85" xml:space="preserve">The domain set in the dashboard must match…</text>
+  <!-- line 3: context + deleted ghost -->
+  <text x="28" y="84" font-family="'SF Mono', Consolas, 'Cascadia Mono', Menlo, monospace" font-size="13" fill="#5f5044">3</text>
+  <text x="64" y="84" font-family="'SF Mono', Consolas, 'Cascadia Mono', Menlo, monospace" font-size="15" fill="#e3d8c9" xml:space="preserve">&lt;div&gt;{!! $message !!}&lt;/div&gt;</text>
+  <text x="384" y="83" font-family="'SF Mono', Consolas, 'Cascadia Mono', Menlo, monospace" font-size="13" fill="#d98b7a" text-decoration="line-through" opacity="0.85" xml:space="preserve">− The domain set in the dashboard must match…</text>
 
-  <!-- rows 2-4: added -->
+  <!-- CodeLens: small grey text above the changed line, exactly like VS Code draws it -->
+  <g font-family="'Segoe UI', system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#9aa7bd">
+    <text x="64" y="112">✓ Accept</text>
+    <text x="132" y="112">⟲ Revert</text>
+    <text x="208" y="112">⇆ Diff</text>
+  </g>
+
+  <!-- added lines -->
   <g>
-    <rect x="8" y="98" width="964" height="34" rx="6" fill="#6fae5b" fill-opacity="0.16"/>
-    <rect x="8" y="98" width="3" height="34" rx="1.5" fill="#6fae5b"/>
-    <text x="28" y="122" font-family="'SF Mono', Consolas, 'Cascadia Mono', Menlo, monospace" font-size="13" fill="#7fa86a">4</text>
-    <text x="46" y="122" font-family="'SF Mono', Consolas, 'Cascadia Mono', Menlo, monospace" font-size="15" fill="#6fae5b">+</text>
-    <text x="64" y="122" font-family="'SF Mono', Consolas, 'Cascadia Mono', Menlo, monospace" font-size="15" fill="#d9eccb" xml:space="preserve">&lt;div class="hint"&gt;</text>
+    <rect x="8" y="122" width="964" height="34" rx="6" fill="#6fae5b" fill-opacity="0.16"/>
+    <rect x="8" y="122" width="3" height="34" rx="1.5" fill="#6fae5b"/>
+    <text x="28" y="146" font-family="'SF Mono', Consolas, 'Cascadia Mono', Menlo, monospace" font-size="13" fill="#7fa86a">4</text>
+    <text x="46" y="146" font-family="'SF Mono', Consolas, 'Cascadia Mono', Menlo, monospace" font-size="15" fill="#6fae5b">+</text>
+    <text x="64" y="146" font-family="'SF Mono', Consolas, 'Cascadia Mono', Menlo, monospace" font-size="15" fill="#d9eccb" xml:space="preserve">&lt;div class="hint"&gt;</text>
   </g>
 
   <g>
-    <rect x="8" y="132" width="964" height="34" fill="#6fae5b" fill-opacity="0.16"/>
-    <rect x="8" y="132" width="3" height="34" fill="#6fae5b"/>
-    <text x="28" y="156" font-family="'SF Mono', Consolas, 'Cascadia Mono', Menlo, monospace" font-size="13" fill="#7fa86a">5</text>
-    <text x="46" y="156" font-family="'SF Mono', Consolas, 'Cascadia Mono', Menlo, monospace" font-size="15" fill="#6fae5b">+</text>
-    <text x="64" y="156" font-family="'SF Mono', Consolas, 'Cascadia Mono', Menlo, monospace" font-size="15" fill="#d9eccb" xml:space="preserve">    Check the domain in your dashboard.</text>
+    <rect x="8" y="156" width="964" height="34" fill="#6fae5b" fill-opacity="0.16"/>
+    <rect x="8" y="156" width="3" height="34" fill="#6fae5b"/>
+    <text x="28" y="180" font-family="'SF Mono', Consolas, 'Cascadia Mono', Menlo, monospace" font-size="13" fill="#7fa86a">5</text>
+    <text x="46" y="180" font-family="'SF Mono', Consolas, 'Cascadia Mono', Menlo, monospace" font-size="15" fill="#6fae5b">+</text>
+    <text x="64" y="180" font-family="'SF Mono', Consolas, 'Cascadia Mono', Menlo, monospace" font-size="15" fill="#d9eccb" xml:space="preserve">    Check the domain in your dashboard.</text>
   </g>
 
   <g>
-    <rect x="8" y="166" width="964" height="34" rx="6" fill="#6fae5b" fill-opacity="0.16"/>
-    <rect x="8" y="166" width="3" height="34" rx="1.5" fill="#6fae5b"/>
-    <text x="28" y="190" font-family="'SF Mono', Consolas, 'Cascadia Mono', Menlo, monospace" font-size="13" fill="#7fa86a">6</text>
-    <text x="46" y="190" font-family="'SF Mono', Consolas, 'Cascadia Mono', Menlo, monospace" font-size="15" fill="#6fae5b">+</text>
-    <text x="64" y="190" font-family="'SF Mono', Consolas, 'Cascadia Mono', Menlo, monospace" font-size="15" fill="#d9eccb" xml:space="preserve">&lt;/div&gt;</text>
+    <rect x="8" y="190" width="964" height="34" rx="6" fill="#6fae5b" fill-opacity="0.16"/>
+    <rect x="8" y="190" width="3" height="34" rx="1.5" fill="#6fae5b"/>
+    <text x="28" y="214" font-family="'SF Mono', Consolas, 'Cascadia Mono', Menlo, monospace" font-size="13" fill="#7fa86a">6</text>
+    <text x="46" y="214" font-family="'SF Mono', Consolas, 'Cascadia Mono', Menlo, monospace" font-size="15" fill="#6fae5b">+</text>
+    <text x="64" y="214" font-family="'SF Mono', Consolas, 'Cascadia Mono', Menlo, monospace" font-size="15" fill="#d9eccb" xml:space="preserve">&lt;/div&gt;</text>
   </g>
 
-  <!-- toolbar -->
-  <g font-family="'Segoe UI', system-ui, sans-serif" font-size="13">
-    <rect x="24" y="216" width="104" height="30" rx="8" fill="#6fae5b" fill-opacity="0.18" stroke="#6fae5b" stroke-opacity="0.45"/>
-    <text x="42" y="236" fill="#b6d9a4">✓ Accept</text>
-
-    <rect x="140" y="216" width="104" height="30" rx="8" fill="#ffffff" fill-opacity="0.035" stroke="#3b2d22"/>
-    <text x="158" y="236" fill="#b7a795">⟲ Revert</text>
-
-    <rect x="256" y="216" width="92" height="30" rx="8" fill="#ffffff" fill-opacity="0.035" stroke="#3b2d22"/>
-    <text x="274" y="236" fill="#b7a795">⇆ Diff</text>
-  </g>
-
-  <text x="950" y="236" text-anchor="end" font-family="'SF Mono', Consolas, 'Cascadia Mono', Menlo, monospace" font-size="12" fill="#6b5a48">+3 −1</text>
+  <text x="950" y="248" text-anchor="end" font-family="'Segoe UI', system-ui, sans-serif" font-size="11" fill="#5f5044">Ctrl+Alt+Enter · Ctrl+Alt+Backspace</text>
 </svg>

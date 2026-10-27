@@ -7,10 +7,10 @@
 **See what your agent changed, right in VS Code.** Added lines in green, deleted lines in red,
 Accept and Revert buttons — all computed locally, without a single AI request.
 
-<img alt="VS Code" src="https://img.shields.io/badge/VS%20Code-1.90%2B-5B7CFF?logo=visualstudiocode&logoColor=white">
-<img alt="License" src="https://img.shields.io/badge/license-MIT-3FB950">
-<img alt="Dependencies" src="https://img.shields.io/badge/dependencies-0-2F81F7">
-<img alt="AI requests" src="https://img.shields.io/badge/AI%20requests-0-F85149">
+<img alt="VS Code 1.90+" src="docs/badge-vscode.svg">
+<img alt="License MIT" src="docs/badge-license.svg">
+<img alt="No dependencies" src="docs/badge-deps.svg">
+<img alt="Zero AI requests" src="docs/badge-ai.svg">
 
 </div>
 
