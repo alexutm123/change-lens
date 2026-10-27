@@ -58,16 +58,8 @@ code --install-extension .\dist\change-lens-0.5.0.vsix --force
 - Файлы больше 512 КБ и двоичные пропускаются.
 - Если вы сами правите или сохраняете файл — изменение считается принятым, подсветка снимается.
 
-## Сборка и тесты
+## Статус-бар
 
-```powershell
-node scripts/make-icon.mjs     # иконка
-node scripts/pack.mjs          # dist/change-lens-0.5.0.vsix
-node test/diff.test.mjs        # 8  — LCS-дифф
-node test/tracker.test.mjs     # 10 — снимки, накопление, откат
-node test/render.test.mjs      # 4  — геометрия подсветки
-node test/activate.test.mjs    # 2  — активация на заглушке VS Code API
-node test/scenario.test.mjs    # 2  — изменение файла и игнорирование git
-```
+`✦ Change Lens` — изменений нет. `⑂ Change Lens · 2` — изменилось два файла, клик открывает список.
+Нажимать и настраивать ничего не нужно.
 
-Зависимостей нет: ни npm-пакетов, ни сборки — только Node.js, который идёт вместе с VS Code.
