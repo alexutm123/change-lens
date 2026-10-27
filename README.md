@@ -23,13 +23,9 @@ Change Lens watches the files of your workspace and shows the difference the mom
 green lines for additions, a red struck-through ghost for deletions, and two buttons — **Accept** or
 **Revert**. No AI, no keys, no configuration: it compares a snapshot with what landed on disk.
 
-```
- 3    <div>{!! $message !!}</div>                    ⌫ deleted (red, struck through)
- ✓ Accept   ⟲ Revert   ⇆ Diff
- 4 +  <div class="hint">
- 5 +      Check the domain in your dashboard.
- 6 +  </div>
-```
+<div align="center">
+  <img src="docs/snippet.svg" alt="Change Lens in action: green added lines, red struck-through deleted line, Accept and Revert buttons" width="100%">
+</div>
 
 Works with any tool that writes files — DeepSeek Harness, Claude Code, Cursor, Codex, scripts,
 generators. Changes made by git are ignored automatically.
