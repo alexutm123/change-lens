@@ -89,7 +89,9 @@ class ToolbarProvider {
      */
     const part = (label, command, tooltip) => {
       const item = new vscode.InlayHintLabelPart(label);
-      if (command) item.command = { title: label, command, tooltip };
+      if (command) {
+        item.command = { title: label.trim(), command, tooltip, arguments: [document.uri.fsPath] };
+      }
       return item;
     };
 
@@ -102,6 +104,13 @@ class ToolbarProvider {
       part(' '),
     ], vscode.InlayHintKind.Type);
 
+    // Клик по любому месту чипа открывает меню действий — на случай, если
+    // редактор не поддерживает клики по отдельным частям подсказки.
+    hint.command = {
+      title: 'Change Lens actions',
+      command: 'changeLens.showActions',
+      arguments: [document.uri.fsPath],
+    };
     hint.paddingLeft = true;
     hint.paddingRight = true;
     return [hint];
@@ -362,61 +371,128 @@ class Controller {
 
   // --------------------------------------------------------------- команды
 
-  async acceptChange() {
+  /**
+   * Документ, к которому относится действие: если пришёл путь из чипа — берём его,
+   * иначе активный редактор.
+   * @param {string} [filePath]
+   * @returns {vscode.TextDocument | undefined}
+   */
+  resolveDocument(filePath) {
+    if (filePath) {
+      const found = vscode.workspace.textDocuments.find((doc) => doc.uri.fsPath === filePath);
+      if (found) return found;
+    }
     const editor = vscode.window.activeTextEditor;
-    if (!editor) return;
-    const filePath = editor.document.uri.fsPath;
-    if (!this.tracker.get(filePath)) return;
-    this.tracker.accept(filePath);
-    this.decorations.clear(editor);
-    this.refresh();
-    vscode.window.setStatusBarMessage('$(check) Change accepted', 3000);
+    return editor ? editor.document : undefined;
   }
 
-  async revertChange() {
-    const editor = vscode.window.activeTextEditor;
-    if (!editor) return;
-    const filePath = editor.document.uri.fsPath;
-    const change = this.tracker.get(filePath);
+  /**
+   * @param {string} filePath
+   */
+  clearDecorationsFor(filePath) {
+    for (const editor of vscode.window.visibleTextEditors) {
+      if (editor.document.uri.fsPath === filePath) this.decorations.clear(editor);
+    }
+  }
+
+  /**
+   * @param {string} [filePath]
+   */
+  async acceptChange(filePath) {
+    const document = this.resolveDocument(filePath);
+    if (!document) return;
+    const target = document.uri.fsPath;
+    if (!this.tracker.get(target)) {
+      this.log(`accept: no pending change for ${target}`);
+      return;
+    }
+    this.tracker.accept(target);
+    this.clearDecorationsFor(target);
+    this.refresh();
+    vscode.window.setStatusBarMessage('$(check) Change accepted', 3000);
+    this.log(`accepted: ${target}`);
+  }
+
+  /**
+   * @param {string} [filePath]
+   */
+  async revertChange(filePath) {
+    const document = this.resolveDocument(filePath);
+    if (!document) return;
+    const target = document.uri.fsPath;
+    const change = this.tracker.get(target);
     if (!change) {
       vscode.window.showInformationMessage('There is no change to revert.');
       return;
     }
 
-    const document = editor.document;
-    this.suppress(filePath, 4000);
-    this.selfWrites.set(filePath, Date.now() + SELF_WRITE_MS);
+    this.suppress(target, 4000);
+    this.selfWrites.set(target, Date.now() + SELF_WRITE_MS);
 
     const edit = new vscode.WorkspaceEdit();
     edit.replace(document.uri, fullRange(document), change.before);
     const applied = await vscode.workspace.applyEdit(edit);
     if (applied) await document.save();
 
-    this.tracker.revert(filePath);
-    this.decorations.clear(editor);
+    this.tracker.revert(target);
+    this.clearDecorationsFor(target);
     this.refresh();
     vscode.window.setStatusBarMessage('$(history) File reverted', 4000);
+    this.log(`reverted: ${target}`);
   }
 
-  async showChangeDiff() {
-    const editor = vscode.window.activeTextEditor;
-    if (!editor) return;
-    const filePath = editor.document.uri.fsPath;
-    const change = this.tracker.get(filePath);
+  /**
+   * @param {string} [filePath]
+   */
+  async showChangeDiff(filePath) {
+    const document = this.resolveDocument(filePath);
+    if (!document) return;
+    const target = document.uri.fsPath;
+    const change = this.tracker.get(target);
     if (!change) {
       vscode.window.showInformationMessage('No pending changes in this file.');
       return;
     }
 
     this.originals.set(change.id, change.before);
-    const name = path.basename(filePath) || 'file';
+    const name = path.basename(target) || 'file';
     const left = vscode.Uri.parse(`${ORIGINAL_SCHEME}:/${encodeURI(name)}`).with({ query: change.id });
     await vscode.commands.executeCommand(
       'vscode.diff',
       left,
-      editor.document.uri,
+      document.uri,
       `Change Lens · ${name}: before ↔ after`,
     );
+  }
+
+  /**
+   * Меню действий: срабатывает по клику на весь чип, если клики по частям
+   * не поддерживаются темой или версией редактора.
+   * @param {string} [filePath]
+   */
+  async showActions(filePath) {
+    const document = this.resolveDocument(filePath);
+    if (!document) return;
+    const target = document.uri.fsPath;
+    if (!this.tracker.get(target)) {
+      vscode.window.showInformationMessage('No pending change in this file.');
+      return;
+    }
+
+    const picked = await vscode.window.showQuickPick(
+      [
+        { label: '$(check) Accept', description: 'Keep the change, drop the highlight', value: 'accept' },
+        { label: '$(discard) Revert', description: 'Restore the file to its previous state', value: 'revert' },
+        { label: '$(diff) Diff', description: 'Open the full diff in a new tab', value: 'diff' },
+      ],
+      { title: 'Change Lens', placeHolder: 'What to do with this change?' },
+    );
+    if (!picked) return;
+
+    this.log(`action: ${picked.value} ${target}`);
+    if (picked.value === 'accept') await this.acceptChange(target);
+    if (picked.value === 'revert') await this.revertChange(target);
+    if (picked.value === 'diff') await this.showChangeDiff(target);
   }
 
   async reviewChanges() {
@@ -530,9 +606,10 @@ function activate(context) {
   controller = new Controller(context);
   context.subscriptions.push(controller);
   context.subscriptions.push(
-    vscode.commands.registerCommand('changeLens.acceptChange', () => controller.acceptChange()),
-    vscode.commands.registerCommand('changeLens.revertChange', () => controller.revertChange()),
-    vscode.commands.registerCommand('changeLens.showChangeDiff', () => controller.showChangeDiff()),
+    vscode.commands.registerCommand('changeLens.acceptChange', (filePath) => controller.acceptChange(filePath)),
+    vscode.commands.registerCommand('changeLens.revertChange', (filePath) => controller.revertChange(filePath)),
+    vscode.commands.registerCommand('changeLens.showChangeDiff', (filePath) => controller.showChangeDiff(filePath)),
+    vscode.commands.registerCommand('changeLens.showActions', (filePath) => controller.showActions(filePath)),
     vscode.commands.registerCommand('changeLens.reviewChanges', () => controller.reviewChanges()),
     vscode.commands.registerCommand('changeLens.showOutput', () => controller.showOutput()),
   );

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.0
+
+- Clicking anywhere on the action chip now opens an actions menu (Accept / Revert / Diff), so the controls
+  work even where clicks on individual inlay-hint parts are not supported.
+- Accept / Revert / Diff commands take an optional file path, so they no longer depend on the active editor.
+
 ## 0.6.0
 
 - The action row (Accept / Revert / Diff) is now an inlay hint instead of CodeLens: it gets a background

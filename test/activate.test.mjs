@@ -8,7 +8,8 @@ const { vscode, commands, statusItems } = installVscodeMock();
 const require = Module.createRequire(import.meta.url);
 
 const EXPECTED_COMMANDS = [
-  'changeLens.acceptChange', 'changeLens.revertChange', 'changeLens.showChangeDiff', 'changeLens.reviewChanges', 'changeLens.showOutput',
+  'changeLens.acceptChange', 'changeLens.revertChange', 'changeLens.showChangeDiff', 'changeLens.showActions', 
+  'changeLens.reviewChanges', 'changeLens.showOutput',
 ];
 
 test('активация регистрирует команды и поднимает наблюдатель за файлами', async () => {
@@ -65,6 +66,8 @@ test('статус-бар и CodeLens показывают изменение ф
   assert.equal(hints[0].position.line, 1, 'чип ставится в конец первой изменённой строки');
   assert.equal(hints[0].position.character, '    <div class="box">'.length);
   assert.match(actions[0].value, /Accept/);
+  assert.equal(hints[0].command.command, 'changeLens.showActions');
+  assert.deepEqual(hints[0].command.arguments, ['/src/a.php']);
 
   controller.tracker.accept('/src/a.php');
   controller.updateStatus();
