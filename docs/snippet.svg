@@ -22,8 +22,10 @@
   <!-- CodeLens: small grey text above the changed line, exactly like VS Code draws it -->
   <g font-family="'Segoe UI', system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#9aa7bd">
     <text x="64" y="112">✓ Accept</text>
-    <text x="132" y="112">⟲ Revert</text>
-    <text x="208" y="112">⇆ Diff</text>
+    <text x="126" y="112" fill="#5f5044">|</text>
+    <text x="138" y="112">⟲ Revert</text>
+    <text x="202" y="112" fill="#5f5044">|</text>
+    <text x="214" y="112">⇆ Diff</text>
   </g>
 
   <!-- added lines -->
